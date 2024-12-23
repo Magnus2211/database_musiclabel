@@ -1,0 +1,168 @@
+--Top 3 profitable artists
+SELECT 
+    Artist.Nickname AS artist_name,
+    SUM(COALESCE(Vinyl.Cost * Vinyl.Sales, 0) + COALESCE(CD.Cost * CD.Sales, 0)) AS total_profits
+FROM 
+    Artist
+JOIN 
+    Release ON Artist.ArtID = Release.ArtID
+JOIN 
+    Project ON Release.ProjectID = Project.ProjectID
+JOIN 
+    Album ON Project.ProjectID = Album.ProjectID
+JOIN 
+    Releases_As ON Album.AlbID = Releases_As.AlbID
+LEFT JOIN 
+    Vinyl ON Releases_As.RelID = Vinyl.RelID
+LEFT JOIN 
+    CD ON Releases_As.RelID = CD.RelID
+GROUP BY 
+    Artist.Nickname
+ORDER BY 
+    total_profits DESC
+LIMIT 3;
+
+
+--Top 5 videos
+SELECT 
+    Project.Title AS video_title,
+    Video.Views AS view_count,
+    Artist.Nickname AS artist_name
+FROM 
+    Video
+JOIN 
+    Project ON Video.ProjectID = Project.ProjectID
+JOIN 
+    Release ON Project.ProjectID = Release.ProjectID
+JOIN 
+    Artist ON Release.ArtID = Artist.ArtID
+ORDER BY 
+    Video.Views DESC
+LIMIT 5;
+
+
+--Find best video according to genre
+
+SELECT 
+    Project.Title AS video_title,
+    Video.Views AS view_count,
+    Artist.Nickname AS artist_name
+FROM 
+    Video
+JOIN 
+    Project ON Video.ProjectID = Project.ProjectID
+JOIN 
+    Release ON Project.ProjectID = Release.ProjectID
+JOIN 
+    Artist ON Release.ArtID = Artist.ArtID
+JOIN 
+    Genre ON Project.GenreID = Genre.GenreID
+WHERE 
+    Genre.Name = 'Rap'  ---you type whichever genre
+ORDER BY 
+    Video.Views DESC
+LIMIT 1;
+
+---Find artists with best engagement(engagements counts as sum of views,plays and sales from cd+vinyl)
+SELECT 
+    Artist.Nickname AS artist_name,
+    SUM(COALESCE(Song.Plays, 0) + COALESCE(Video.Views, 0) + 
+        COALESCE(CD.Sales, 0) + COALESCE(Vinyl.Sales, 0)) AS total_engagement
+FROM 
+    Artist
+JOIN 
+    Release ON Artist.ArtID = Release.ArtID
+JOIN 
+    Project ON Release.ProjectID = Project.ProjectID
+LEFT JOIN 
+    Song ON Project.ProjectID = Song.ProjectID
+LEFT JOIN 
+    Video ON Project.ProjectID = Video.ProjectID
+LEFT JOIN 
+    Album ON Project.ProjectID = Album.ProjectID
+LEFT JOIN 
+    Releases_As ON Album.AlbID = Releases_As.AlbID
+LEFT JOIN 
+    CD ON Releases_As.RelID = CD.RelID
+LEFT JOIN 
+    Vinyl ON Releases_As.RelID = Vinyl.RelID
+GROUP BY 
+    Artist.Nickname
+ORDER BY 
+    total_engagement DESC
+LIMIT 3;
+
+---Most Popular Genre by Engagement
+SELECT 
+    Genre.Name AS genre_name,
+    SUM(COALESCE(Song.Plays, 0) + COALESCE(Video.Views, 0) + 
+        COALESCE(CD.Sales, 0) + COALESCE(Vinyl.Sales, 0)) AS total_engagement
+FROM 
+    Genre
+JOIN 
+    Project ON Genre.GenreID = Project.GenreID
+LEFT JOIN 
+    Song ON Project.ProjectID = Song.ProjectID
+LEFT JOIN 
+    Video ON Project.ProjectID = Video.ProjectID
+LEFT JOIN 
+    Album ON Project.ProjectID = Album.ProjectID
+LEFT JOIN 
+    Releases_As ON Album.AlbID = Releases_As.AlbID
+LEFT JOIN 
+    CD ON Releases_As.RelID = CD.RelID
+LEFT JOIN 
+    Vinyl ON Releases_As.RelID = Vinyl.RelID
+GROUP BY 
+    Genre.Name
+ORDER BY 
+    total_engagement DESC
+LIMIT 1;
+
+---Best-Selling Format
+SELECT 
+    Format.Description AS format_type,
+    SUM(COALESCE(CD.Sales, 0) + COALESCE(Vinyl.Sales, 0)) AS total_sales
+FROM 
+    Format
+LEFT JOIN 
+    CD ON Format.FormID = CD.FormID
+LEFT JOIN 
+    Vinyl ON Format.FormID = Vinyl.FormID
+GROUP BY 
+    Format.Description
+ORDER BY 
+    total_sales DESC
+LIMIT 1;
+
+---Artists with most releases
+SELECT 
+    Artist.Nickname AS artist_name,
+    COUNT(Release.ProjectID) AS total_releases
+FROM 
+    Artist
+JOIN 
+    Release ON Artist.ArtID = Release.ArtID
+GROUP BY 
+    Artist.Nickname
+ORDER BY 
+    total_releases DESC
+LIMIT 5;
+
+--shows songs that have ft in
+SELECT 
+    p.Title AS project_title,
+    a1.Nickname AS artist_1,
+    a2.Nickname AS artist_2
+FROM 
+    Release r1
+JOIN 
+    Release r2 ON r1.ProjectID = r2.ProjectID AND r1.ArtID < r2.ArtID
+JOIN 
+    Artist a1 ON r1.ArtID = a1.ArtID
+JOIN 
+    Artist a2 ON r2.ArtID = a2.ArtID
+JOIN 
+    Project p ON r1.ProjectID = p.ProjectID
+ORDER BY 
+    p.Title, artist_1, artist_2;

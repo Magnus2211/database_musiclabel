@@ -23,30 +23,19 @@ CREATE TABLE IF NOT EXISTS "Individual" (
     "IndividID" INTEGER,
     "First_name" VARCHAR(25) DEFAULT '',
     "Last_name" VARCHAR(25) DEFAULT '',
-    "Country" VARCHAR(25) DEFAULT '',
+    "Country born" VARCHAR(25) DEFAULT '',
     "Age" INTEGER DEFAULT 0,
     "Phone" VARCHAR(25) DEFAULT '',
     "Email" VARCHAR(25) DEFAULT '',
     "UserID" INTEGER NOT NULL,
-    "ContID" INTEGER NOT NULL,
     "ArtID" INTEGER NOT NULL,
     PRIMARY KEY ("IndividID"),
     FOREIGN KEY ("UserID") REFERENCES "User" ("UserID")
-        ON DELETE CASCADE,
-    FOREIGN KEY ("ContID") REFERENCES "Contract" ("ContID")
         ON DELETE CASCADE,
     FOREIGN KEY ("ArtID") REFERENCES "Artist" ("ArtID")
         ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS "Contract";
-CREATE TABLE IF NOT EXISTS "Contract" (
-    "ContID" INTEGER NOT NULL,
-    "Start_Date" DATE DEFAULT NULL,
-    "End_Date" DATE DEFAULT NULL,
-    "Salary" FLOAT DEFAULT 0,
-    PRIMARY KEY ("ContID")
-);
 
 DROP TABLE IF EXISTS "Project";
 CREATE TABLE IF NOT EXISTS "Project" (
@@ -72,6 +61,17 @@ CREATE TABLE IF NOT EXISTS "Song" (
     PRIMARY KEY ("SongID"),
     FOREIGN KEY ("ProjectID") REFERENCES "Project" ("ProjectID")
         ON DELETE CASCADE
+);
+
+DROP TABLE IF EXISTS "Is_part_of";
+CREATE TABLE IF NOT EXISTS "Is_part_of" (
+	"SongID" integer,
+	"AlbID" integer,
+	PRIMARY KEY ("SongID", "AlbID"),
+	FOREIGN KEY ("SongID") REFERENCES "Song" ("SongID")
+            ON DELETE CASCADE,
+	FOREIGN KEY ("AlbID") REFERENCES "Album" ("AlbID")
+            ON DELETE CASCADE
 );
 
 DROP TABLE IF EXISTS "Video";
@@ -100,60 +100,58 @@ CREATE TABLE IF NOT EXISTS "Album" (
 
 DROP TABLE IF EXISTS "Releases_As";
 CREATE TABLE IF NOT EXISTS "Releases_As" (
+    "RelID" INTEGER NOT NULL,
     "AlbID" INTEGER NOT NULL,
-    "FormID" INTEGER NOT NULL,
-    PRIMARY KEY ("AlbID", "FormID"),
+    PRIMARY KEY ("RelID"),
     FOREIGN KEY ("AlbID") REFERENCES "Album" ("AlbID")
-        ON DELETE CASCADE,
-    FOREIGN KEY ("FormID") REFERENCES "Format" ("FormID")
         ON DELETE CASCADE
 );
 
 DROP TABLE IF EXISTS "Format";
 CREATE TABLE IF NOT EXISTS "Format" (
     "FormID" INTEGER NOT NULL,
+    "Description" VARCHAR(10) NOT NULL,
     PRIMARY KEY ("FormID")
 );
 
 DROP TABLE IF EXISTS "Vinyl";
 CREATE TABLE IF NOT EXISTS "Vinyl" (
+    "RelID" INTEGER NOT NULL,
     "FormID" INTEGER NOT NULL,
     "Cost" FLOAT DEFAULT 0,
     "Sales" INTEGER DEFAULT 0,
-    PRIMARY KEY ("FormID"),
+    PRIMARY KEY ("RelID","FormID"),
+    FOREIGN KEY ("RelID") REFERENCES "Releases_As" ("RelID")
+        ON DELETE CASCADE,
     FOREIGN KEY ("FormID") REFERENCES "Format" ("FormID")
         ON DELETE CASCADE
 );
 
 DROP TABLE IF EXISTS "CD";
 CREATE TABLE IF NOT EXISTS "CD" (
+    "RelID" INTEGER NOT NULL,
     "FormID" INTEGER NOT NULL,
     "Cost" FLOAT DEFAULT 0,
     "Sales" INTEGER DEFAULT 0,
-    PRIMARY KEY ("FormID"),
+    PRIMARY KEY ("RelID","FormID"),
+    FOREIGN KEY ("RelID") REFERENCES "Releases_As" ("RelID")
+        ON DELETE CASCADE,
     FOREIGN KEY ("FormID") REFERENCES "Format" ("FormID")
         ON DELETE CASCADE
 );
 
 DROP TABLE IF EXISTS "Digital";
 CREATE TABLE IF NOT EXISTS "Digital" (
+    "RelID" INTEGER NOT NULL,
     "FormID" INTEGER NOT NULL,
     "Plays" INTEGER DEFAULT 0,
-    PRIMARY KEY ("FormID"),
+    PRIMARY KEY ("RelID","FormID"),
+    FOREIGN KEY ("RelID") REFERENCES "Releases_As" ("RelID")
+        ON DELETE CASCADE,
     FOREIGN KEY ("FormID") REFERENCES "Format" ("FormID")
         ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS "Is_part_of";
-CREATE TABLE IF NOT EXISTS "Is_part_of" (
-    "SongID" INTEGER NOT NULL,
-    "AlbID" INTEGER NOT NULL,
-    PRIMARY KEY ("SongID", "AlbID"),
-    FOREIGN KEY ("SongID") REFERENCES "Song" ("SongID")
-        ON DELETE CASCADE,
-    FOREIGN KEY ("AlbID") REFERENCES "Album" ("AlbID")
-        ON DELETE CASCADE
-);
 
 DROP TABLE IF EXISTS "Partner";
 CREATE TABLE IF NOT EXISTS "Partner" (
@@ -181,7 +179,7 @@ DROP TABLE IF EXISTS "Artist";
 CREATE TABLE IF NOT EXISTS "Artist" (
     "ArtID" INTEGER NOT NULL,
     "Nickname" VARCHAR (50) NOT NULL,
-    "Country" VARCHAR (50) NOT NULL,
+    "Country they operate" VARCHAR (50) NOT NULL,
     PRIMARY KEY ("ArtID")
 );
 
@@ -234,105 +232,257 @@ CREATE TABLE IF NOT EXISTS "Release" (
 -- Insert into User
 INSERT INTO "User" ("UserID", "username", "password", "bool_admin")
 VALUES
-(1, 'user1', 'password1', FALSE),
-(2, 'admin1', 'password2', TRUE);
+(1, 'dan', '1234', FALSE),
+(2, 'benmckee', '1234', FALSE),
+(3, 'daniel', '1234', FALSE),
+(4, 'waynesermon', '1234', FALSE),
+(5, 'drake', '1234', FALSE),
+(6, 'kendrick', '1234', FALSE),
+(7, 'jcole', '1234', FALSE),
+(8, 'weekend', '1234', FALSE),
+(9, 'admin1', '1234', TRUE),
+(10, 'admin2', '1234', TRUE);
+
 
 -- Insert into Admin
 INSERT INTO "Admin" ("AdminID", "UserID")
 VALUES
-(1, 2);
+(1, 9),
+(2, 10);
 
--- Insert into Contract
-INSERT INTO "Contract" ("ContID", "Start_Date", "End_Date", "Salary")
-VALUES
-(1, '2024-01-01', '2024-12-31', 50000),
-(2, '2024-06-01', '2025-05-31', 60000);
 
 -- Insert into Artist
-INSERT INTO "Artist" ("ArtID", "Nickname", "Country")
+INSERT INTO "Artist" ("ArtID", "Nickname", "Country they operate")
 VALUES
-(1, 'Artist1', 'USA'),
-(2, 'Artist2', 'Canada');
+(1, 'Imagine Dragons', 'USA'),
+(2, 'Drake', 'Canada'),
+(3, 'Kendrick Lamar', 'USA'),
+(4, 'J. Cole', 'USA'),
+(5, 'The Weekend', 'Canada');
 
 -- Insert into Individual
-INSERT INTO "Individual" ("IndividID", "First_name", "Last_name", "Country", "Age", "Phone", "Email", "UserID", "ContID", "ArtID")
+INSERT INTO "Individual" ("IndividID", "First_name", "Last_name", "Country born", "Age", "Phone", "Email", "UserID",  "ArtID")
 VALUES
-(1, 'John', 'Doe', 'USA', 25, '1234567890', 'johndoe@example.com', 1, 1, 1),
-(2, 'Jane', 'Smith', 'Canada', 30, '0987654321', 'janesmith@example.com', 2, 2, 2);
+(1, 'Dan', 'Reynolds', 'USA', 35, '1234567890', 'dan@yahoo.com', 1, 1),
+(2, 'Wayne', 'Sermon', 'USA', 30, '0987654321', 'wayne_sermons@yahoo.com', 2, 1),
+(3, 'Ben', 'McKee', 'USA', 30, '0987654321', 'ben_mckee@yahoo.com', 3, 1),
+(4, 'Daniel', 'Platzman', 'USA', 30, '0987654321', 'daniel_platzman@yahoo.com', 4, 1),
+(5, 'Aubrey', 'Graham', 'Canada', 30, '0987654321', 'drake@yahoo.com', 5, 2),
+(6, 'Kendrick', 'Duckworth', 'USA', 30, '0987654321', 'kendrick@yahoo.com', 6, 3),
+(7, 'Jermaine', 'Cole', 'USA', 30, '0987654321', 'jcole@yahoo.com', 7, 4),
+(8, 'Abel', 'Tesfaye', 'Canada', 30, '0987654321', 'theweekend@yahoo.com', 8, 5);
 
 -- Insert into Genre
 INSERT INTO "Genre" ("GenreID", "Name")
 VALUES
 (1, 'Pop'),
-(2, 'Rock');
+(2, 'Rock'),
+(3, 'Rap');
 
 -- Insert into Project
 INSERT INTO "Project" ("ProjectID", "Release_Date", "ArtistID", "GenreID", "Title")
 VALUES
-(1, '2024-03-01', 1, 1, 'Album1'),
-(2, '2024-08-01', 2, 2, 'Album2');
+--imagine dragons
+(1, '2024-03-01', 1, 2, 'LOOM (Album)'),
+(2, '2024-03-01', 1, 2, 'Wake up (Song)'),
+(3, '2024-03-01', 1, 2, 'Nice to Meet You (Song)'),
+(4, '2024-03-01', 1, 2, 'Eyes Closed (Song)'),
+(5, '2022-04-20', 1, 2, 'Mercury (Album)'),
+(6, '2022-04-20', 1, 2, 'My Life (Song)'),
+(7,'2022-04-20', 1, 2, 'Lonely (Song)'),
+(8,'2022-04-20', 1, 2, 'Wrecked (Song)'),
+--drake
+(9,'2024-08-01', 2, 3, 'For All the Dogs (Album)'),
+(10,'2024-08-01', 2, 3, 'Amen (Song)'),
+(11,'2024-08-01', 2, 3, 'First Person Shooter (Song)'),
+(12,'2024-08-10', 2, 3, 'First Person Shooter (Video)'),
+(13,'2024-08-01', 2, 3, 'Tried Our Best (Song)'),
+(14,'2022-03-25', 2, 3, 'Her Loss (Album)'),
+(15,'2022-03-25', 2, 3, 'Rich Flex (Song)'),
+(16,'2022-03-30', 2, 3, 'Rich Flex (Video)'),
+(17,'2022-03-25', 2, 3, 'Major Distribution (Song)'),
+(18,'2022-03-25', 2, 3, 'Broke Boys (Song)'),
+--kendrick
+(19,'2024-11-25', 3, 3, 'GNX (Album)'),
+(20,'2024-11-25', 3, 3, 'reincarnated (Song)'),
+(21,'2024-11-25', 3, 3, 'squabble up (Song)'),
+(22,'2024-11-28', 3, 3, 'squabble up (Video)'),
+(23,'2024-11-25', 3, 3, 'man at the garden (Song)'),
+(24,'2024-11-25', 3, 3, 'wacced out murals (Song)'),
+(25,'2017-02-11', 3, 3, 'DAMN (Album)'),
+(26,'2017-02-11', 3, 3, 'DNA (Song)'),
+(27,'2017-02-11', 3, 3, 'DNA (Video)'),
+(28,'2017-02-11', 3, 3, 'Pride (Song)'),
+(29,'2017-02-11', 3, 3, 'Pride (Video)'),
+--ft drake
+(30,'2012-04-16', 3, 3, 'Poetic Justice (Song)');
+
+
+
+-- Insert into Release
+INSERT INTO "Release" ("ArtID", "ProjectID")
+VALUES
+(1, 1),
+(1, 2),
+(1, 3),
+(1, 4),
+(1, 5),
+(1, 6),
+(1, 7),
+(1, 8),
+(2, 9),
+(2,10),
+(2,11),
+(2,12),
+(2,13),
+(2,14),
+(2,15),
+(2,16),
+(2,17),
+(2,18),
+(3,19),
+(3,20),
+(3,21),
+(3,22),
+(3,23),
+(3,24),
+(3,25),
+(3,26),
+(3,27),
+(3,28),
+(3,29),
+(3,30),
+(2,30);
 
 -- Insert into Song
 INSERT INTO "Song" ("SongID", "ProjectID", "Duration", "Rating", "Plays")
 VALUES
-(1, 1, 240, 4.5, 1000),
-(2, 2, 180, 4.0, 800);
+(1, 2, 240, 1, 100),
+(2, 3, 180, 2, 200),
+(3, 4, 180, 3, 300),
+(4, 6, 180, 4, 400),
+(5, 7, 180, 5, 500),
+(6, 8, 180, 1, 600),
+--drake
+(7, 10, 180, 2, 700),
+(8, 11, 180, 3, 800),
+(9, 13,180, 4, 900),
+(10, 15,180, 5, 1000),
+(11, 17,180, 1, 1100),
+(12, 18,180, 1, 1100),
+--kendrick
+(13, 20,180, 1, 1100),
+(14, 21,180, 1, 1100),
+(15, 23,180, 1, 1100),
+(16, 24,180, 1, 1100),
+(17, 26,180, 1, 1100),
+(18, 28,180, 1, 1100),
+--solo
+(19, 30,180, 1, 1100);
 
 -- Insert into Video
 INSERT INTO "Video" ("VideoID", "ProjectID", "SongID", "Rating", "Views")
 VALUES
-(1, 1, 1, 4.5, 2000),
-(2, 2, 2, 4.0, 1500);
+(1, 12, 8, 4.5, 2000),
+(2, 16, 10, 4.0, 1500),
+(3, 22, 14, 4.0, 1500),
+(4, 27, 17, 4.0, 1500),
+(5, 29, 18, 4.0, 1500);
 
 -- Insert into Album
 INSERT INTO "Album" ("AlbID", "ProjectID", "Rating")
 VALUES
-(1, 1, 4.5),
-(2, 2, 4.0);
+(1, 1, 1.5),
+(2, 5, 2.0),
+(3, 9, 3.0),
+(4, 14, 4.0),
+(5, 19, 4.5),
+(6, 25, 5.0);
 
 -- Insert into Format
-INSERT INTO "Format" ("FormID")
+INSERT INTO "Format" ("FormID","Description")
 VALUES
-(1), (2), (3);
+(1,"Vinyl"), 
+(2,"CD"), 
+(3,"Digital");
 
 -- Insert into Releases_As
-INSERT INTO "Releases_As" ("AlbID", "FormID")
+INSERT INTO "Releases_As" ("RelID","AlbID")
 VALUES
-(1, 1),
-(2, 2);
+(1,1),
+(2,2),
+(3,3),
+(4,4),
+(5,5),
+(6,6);
+
+INSERT INTO "Is_part_of" ("SongID","AlbID")
+VALUES
+(1,1),
+(2,1),
+(3,1),
+(4,1),
+(5,1),
+(6,1),
+(7,2),
+(8,2),
+(9,2),
+(10,2),
+(11,2),
+(12,2),
+(13,3),
+(14,3),
+(15,3),
+(16,3),
+(17,3),
+(18,3);
 
 -- Insert into Vinyl
-INSERT INTO "Vinyl" ("FormID", "Cost", "Sales")
+INSERT INTO "Vinyl" ("RelID","FormID", "Cost", "Sales")
 VALUES
-(1, 30.5, 500);
+(1,1, 15, 500),
+(2,1, 15, 500);
 
 -- Insert into CD
-INSERT INTO "CD" ("FormID", "Cost", "Sales")
+INSERT INTO "CD" ("RelID","FormID", "Cost", "Sales")
 VALUES
-(2, 15.0, 800);
+(1,2, 5.0, 100),
+(2,2, 5.0, 200),
+(3,2, 5.0, 300),
+(4,2, 5.0, 400),
+(5,2, 5.0, 500),
+(6,2, 15.0, 600);
 
 -- Insert into Digital
-INSERT INTO "Digital" ("FormID", "Plays")
+INSERT INTO "Digital" ("RelID","FormID", "Plays")
 VALUES
-(3, 10000);
+(1,3, 10000),
+(2,3, 10000),
+(3,3, 10000),
+(4,3, 10000),
+(5,3, 10000),
+(6,3, 10000);
 
--- Insert into Is_part_of
-INSERT INTO "Is_part_of" ("SongID", "AlbID")
-VALUES
-(1, 1),
-(2, 2);
 
 -- Insert into Role
 INSERT INTO "Role" ("RoleID", "Description")
 VALUES
 (1, 'Producer'),
-(2, 'Composer');
+(2, 'Composer'),
+(3, 'Video Director'),
+(4, 'Lyricist');
 
 -- Insert into Partner
 INSERT INTO "Partner" ("PartID", "RoleID", "First_name", "Last_name")
 VALUES
-(1, 1, 'Alice', 'Johnson'),
-(2, 2, 'Bob', 'Williams');
+(1, 1, 'Alice', 'Producer1'),
+(2, 1, 'Bob', 'Producer2'),
+(3, 2, 'Bob', 'Composer1'),
+(4, 2, 'Bob', 'Composer2'),
+(5, 3, 'Bob', 'Video Director1'),
+(6, 3, 'Bob', 'Video Director2'),
+(7, 4, 'Bob', 'Lyricist1'),
+(8, 4, 'Bob', 'Lyricist2');
 
 -- Insert into Works_on
 INSERT INTO "Works_on" ("ProjectID", "PartID")
@@ -343,17 +493,14 @@ VALUES
 -- Insert into Instrument
 INSERT INTO "Instrument" ("InstID", "Name")
 VALUES
-(1, 'Guitar'),
-(2, 'Piano');
+(1, 'Vocals'),
+(2, 'Piano'),
+(3, 'Drums'),
+(4, 'Guitar'),
+(5, 'Base');
 
 -- Insert into Plays
 INSERT INTO "Plays" ("IndividID", "InstID")
-VALUES
-(1, 1),
-(2, 2);
-
--- Insert into Release
-INSERT INTO "Release" ("ArtID", "ProjectID")
 VALUES
 (1, 1),
 (2, 2);
