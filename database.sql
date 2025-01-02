@@ -16,11 +16,12 @@ CREATE TABLE IF NOT EXISTS "Admin" (
     PRIMARY KEY ("AdminID"),
     FOREIGN KEY ("UserID") REFERENCES "User" ("UserID")
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS "Individual";
 CREATE TABLE IF NOT EXISTS "Individual" (
-    "IndividID" INTEGER,
+    "IndividID" INTEGER PRIMARY KEY AUTOINCREMENT,
     "First_name" VARCHAR(25) DEFAULT '',
     "Last_name" VARCHAR(25) DEFAULT '',
     "Country born" VARCHAR(25) DEFAULT '',
@@ -29,11 +30,12 @@ CREATE TABLE IF NOT EXISTS "Individual" (
     "Email" VARCHAR(25) DEFAULT '',
     "UserID" INTEGER NOT NULL,
     "ArtID" INTEGER NOT NULL,
-    PRIMARY KEY ("IndividID"),
     FOREIGN KEY ("UserID") REFERENCES "User" ("UserID")
-        ON DELETE CASCADE,
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
     FOREIGN KEY ("ArtID") REFERENCES "Artist" ("ArtID")
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
@@ -41,14 +43,16 @@ DROP TABLE IF EXISTS "Project";
 CREATE TABLE IF NOT EXISTS "Project" (
     "ProjectID" INTEGER NOT NULL,
     "Release_Date" DATE DEFAULT NULL,
-    "ArtistID" INTEGER NOT NULL,
+    "ArtID" INTEGER NOT NULL,
     "GenreID" INTEGER NOT NULL,
     "Title" VARCHAR(50) DEFAULT '',
     PRIMARY KEY ("ProjectID"),
-    FOREIGN KEY ("ArtistID") REFERENCES "Artist" ("ArtID")
-        ON DELETE CASCADE,
+    FOREIGN KEY ("ArtID") REFERENCES "Artist" ("ArtID")
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
     FOREIGN KEY ("GenreID") REFERENCES "Genre" ("GenreID")
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS "Song";
@@ -61,6 +65,7 @@ CREATE TABLE IF NOT EXISTS "Song" (
     PRIMARY KEY ("SongID"),
     FOREIGN KEY ("ProjectID") REFERENCES "Project" ("ProjectID")
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS "Is_part_of";
@@ -69,9 +74,11 @@ CREATE TABLE IF NOT EXISTS "Is_part_of" (
 	"AlbID" integer,
 	PRIMARY KEY ("SongID", "AlbID"),
 	FOREIGN KEY ("SongID") REFERENCES "Song" ("SongID")
-            ON DELETE CASCADE,
+            ON DELETE CASCADE
+            ON UPDATE CASCADE,
 	FOREIGN KEY ("AlbID") REFERENCES "Album" ("AlbID")
             ON DELETE CASCADE
+            ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS "Video";
@@ -83,9 +90,11 @@ CREATE TABLE IF NOT EXISTS "Video" (
     "Views" INTEGER DEFAULT 0,
     PRIMARY KEY ("VideoID"),
     FOREIGN KEY ("ProjectID") REFERENCES "Project" ("ProjectID")
-        ON DELETE CASCADE,
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
     FOREIGN KEY ("SongID") REFERENCES "Song" ("SongID")
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS "Album";
@@ -96,16 +105,9 @@ CREATE TABLE IF NOT EXISTS "Album" (
     PRIMARY KEY ("AlbID"),
     FOREIGN KEY ("ProjectID") REFERENCES "Project" ("ProjectID")
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
-DROP TABLE IF EXISTS "Releases_As";
-CREATE TABLE IF NOT EXISTS "Releases_As" (
-    "RelID" INTEGER NOT NULL,
-    "AlbID" INTEGER NOT NULL,
-    PRIMARY KEY ("RelID"),
-    FOREIGN KEY ("AlbID") REFERENCES "Album" ("AlbID")
-        ON DELETE CASCADE
-);
 
 DROP TABLE IF EXISTS "Format";
 CREATE TABLE IF NOT EXISTS "Format" (
@@ -116,40 +118,46 @@ CREATE TABLE IF NOT EXISTS "Format" (
 
 DROP TABLE IF EXISTS "Vinyl";
 CREATE TABLE IF NOT EXISTS "Vinyl" (
-    "RelID" INTEGER NOT NULL,
+    "AlbID" INTEGER NOT NULL,
     "FormID" INTEGER NOT NULL,
     "Cost" FLOAT DEFAULT 0,
     "Sales" INTEGER DEFAULT 0,
-    PRIMARY KEY ("RelID","FormID"),
-    FOREIGN KEY ("RelID") REFERENCES "Releases_As" ("RelID")
-        ON DELETE CASCADE,
+    PRIMARY KEY ("AlbID","FormID"),
+    FOREIGN KEY ("AlbID") REFERENCES "Album" ("AlbID")
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
     FOREIGN KEY ("FormID") REFERENCES "Format" ("FormID")
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS "CD";
 CREATE TABLE IF NOT EXISTS "CD" (
-    "RelID" INTEGER NOT NULL,
+    "AlbID" INTEGER NOT NULL,
     "FormID" INTEGER NOT NULL,
     "Cost" FLOAT DEFAULT 0,
     "Sales" INTEGER DEFAULT 0,
-    PRIMARY KEY ("RelID","FormID"),
-    FOREIGN KEY ("RelID") REFERENCES "Releases_As" ("RelID")
-        ON DELETE CASCADE,
+    PRIMARY KEY ("AlbID","FormID"),
+    FOREIGN KEY ("AlbID") REFERENCES "Album" ("AlbID")
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
     FOREIGN KEY ("FormID") REFERENCES "Format" ("FormID")
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS "Digital";
 CREATE TABLE IF NOT EXISTS "Digital" (
-    "RelID" INTEGER NOT NULL,
+    "AlbID" INTEGER NOT NULL,
     "FormID" INTEGER NOT NULL,
     "Plays" INTEGER DEFAULT 0,
-    PRIMARY KEY ("RelID","FormID"),
-    FOREIGN KEY ("RelID") REFERENCES "Releases_As" ("RelID")
-        ON DELETE CASCADE,
+    PRIMARY KEY ("AlbID","FormID"),
+    FOREIGN KEY ("AlbID") REFERENCES "Album" ("AlbID")
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
     FOREIGN KEY ("FormID") REFERENCES "Format" ("FormID")
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
@@ -162,6 +170,7 @@ CREATE TABLE IF NOT EXISTS "Partner" (
     PRIMARY KEY ("PartID"),
     FOREIGN KEY ("RoleID") REFERENCES "Role" ("RoleID")
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS "Works_on";
@@ -170,9 +179,11 @@ CREATE TABLE IF NOT EXISTS "Works_on" (
     "PartID" INTEGER NOT NULL,
     PRIMARY KEY ("ProjectID", "PartID"),
     FOREIGN KEY ("ProjectID") REFERENCES "Project" ("ProjectID")
-        ON DELETE CASCADE,
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
     FOREIGN KEY ("PartID") REFERENCES "Partner" ("PartID")
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS "Artist";
@@ -203,9 +214,11 @@ CREATE TABLE IF NOT EXISTS "Plays" (
     "InstID" INTEGER NOT NULL,
     PRIMARY KEY ("IndividID", "InstID"),
     FOREIGN KEY ("IndividID") REFERENCES "Individual" ("IndividID")
-        ON DELETE CASCADE,
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
     FOREIGN KEY ("InstID") REFERENCES "Instrument" ("InstID")
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 DROP TABLE IF EXISTS "Instrument";
@@ -221,9 +234,11 @@ CREATE TABLE IF NOT EXISTS "Release" (
     "ProjectID" INTEGER NOT NULL,
     PRIMARY KEY ("ArtID", "ProjectID"),
     FOREIGN KEY ("ArtID") REFERENCES "Artist" ("ArtID")
-        ON DELETE CASCADE,
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
     FOREIGN KEY ("ProjectID") REFERENCES "Project" ("ProjectID")
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
@@ -280,7 +295,7 @@ VALUES
 (3, 'Rap');
 
 -- Insert into Project
-INSERT INTO "Project" ("ProjectID", "Release_Date", "ArtistID", "GenreID", "Title")
+INSERT INTO "Project" ("ProjectID", "Release_Date", "ArtID", "GenreID", "Title")
 VALUES
 --imagine dragons
 (1, '2024-03-01', 1, 2, 'LOOM (Album)'),
@@ -406,15 +421,7 @@ VALUES
 (2,"CD"), 
 (3,"Digital");
 
--- Insert into Releases_As
-INSERT INTO "Releases_As" ("RelID","AlbID")
-VALUES
-(1,1),
-(2,2),
-(3,3),
-(4,4),
-(5,5),
-(6,6);
+
 
 INSERT INTO "Is_part_of" ("SongID","AlbID")
 VALUES
@@ -438,13 +445,13 @@ VALUES
 (18,3);
 
 -- Insert into Vinyl
-INSERT INTO "Vinyl" ("RelID","FormID", "Cost", "Sales")
+INSERT INTO "Vinyl" ("AlbID","FormID", "Cost", "Sales")
 VALUES
 (1,1, 15, 500),
 (2,1, 15, 500);
 
 -- Insert into CD
-INSERT INTO "CD" ("RelID","FormID", "Cost", "Sales")
+INSERT INTO "CD" ("AlbID","FormID", "Cost", "Sales")
 VALUES
 (1,2, 5.0, 100),
 (2,2, 5.0, 200),
@@ -454,7 +461,7 @@ VALUES
 (6,2, 15.0, 600);
 
 -- Insert into Digital
-INSERT INTO "Digital" ("RelID","FormID", "Plays")
+INSERT INTO "Digital" ("AlbID","FormID", "Plays")
 VALUES
 (1,3, 10000),
 (2,3, 10000),
