@@ -22,7 +22,7 @@ def show_main_screen():
     clear(root)
 
     # Title Label
-    title_label = tk.Label(root, text="Welcome", font=("Helvetica", 16, "bold"), fg="blue")
+    title_label = tk.Label(root, text="Individual Panel", font=("Helvetica", 16, "bold"), fg="blue")
     title_label.pack(pady=20)
 
     # My Profile Button

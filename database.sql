@@ -52,7 +52,8 @@ CREATE TABLE IF NOT EXISTS "Project" (
         ON UPDATE CASCADE,
     FOREIGN KEY ("GenreID") REFERENCES "Genre" ("GenreID")
         ON DELETE CASCADE
-        ON UPDATE CASCADE
+        ON UPDATE CASCADE,
+    UNIQUE ("ArtID", "Title")
 );
 
 DROP TABLE IF EXISTS "Song";
@@ -85,9 +86,10 @@ DROP TABLE IF EXISTS "Video";
 CREATE TABLE IF NOT EXISTS "Video" (
     "VideoID" INTEGER NOT NULL,
     "ProjectID" INTEGER NOT NULL,
-    "SongID" INTEGER NOT NULL,
+    "SongID" INTEGER DEFAULT NULL,
     "Rating" FLOAT DEFAULT 0,
     "Views" INTEGER DEFAULT 0,
+    "Duration" INTEGER DEFAULT 0,
     PRIMARY KEY ("VideoID"),
     FOREIGN KEY ("ProjectID") REFERENCES "Project" ("ProjectID")
         ON DELETE CASCADE
@@ -253,17 +255,18 @@ VALUES
 (4, 'waynesermon', '1234', FALSE),
 (5, 'drake', '1234', FALSE),
 (6, 'kendrick', '1234', FALSE),
-(7, 'jcole', '1234', FALSE),
-(8, 'weekend', '1234', FALSE),
-(9, 'admin1', '1234', TRUE),
-(10, 'admin2', '1234', TRUE);
+(7, 'sabrina', '1234', FALSE),
+(8, 'weeknd', '1234', FALSE),
+(9, 'admin', '1234', TRUE),
+(10,'woodkid','1234',FALSE);
+
 
 
 -- Insert into Admin
 INSERT INTO "Admin" ("AdminID", "UserID")
 VALUES
-(1, 9),
-(2, 10);
+(1, 9);
+
 
 
 -- Insert into Artist
@@ -272,8 +275,9 @@ VALUES
 (1, 'Imagine Dragons', 'USA'),
 (2, 'Drake', 'Canada'),
 (3, 'Kendrick Lamar', 'USA'),
-(4, 'J. Cole', 'USA'),
-(5, 'The Weekend', 'Canada');
+(4, 'Sabrina Carpenter', 'USA'),
+(5, 'The Weeknd', 'Canada'),
+(6, 'Woodkid', 'France');
 
 -- Insert into Individual
 INSERT INTO "Individual" ("IndividID", "First_name", "Last_name", "Country born", "Age", "Phone", "Email", "UserID",  "ArtID")
@@ -284,8 +288,9 @@ VALUES
 (4, 'Daniel', 'Platzman', 'USA', 30, '0987654321', 'daniel_platzman@yahoo.com', 4, 1),
 (5, 'Aubrey', 'Graham', 'Canada', 30, '0987654321', 'drake@yahoo.com', 5, 2),
 (6, 'Kendrick', 'Duckworth', 'USA', 30, '0987654321', 'kendrick@yahoo.com', 6, 3),
-(7, 'Jermaine', 'Cole', 'USA', 30, '0987654321', 'jcole@yahoo.com', 7, 4),
-(8, 'Abel', 'Tesfaye', 'Canada', 30, '0987654321', 'theweekend@yahoo.com', 8, 5);
+(7, 'Sabrina', 'Carpenter', 'USA', 30, '0987654321', 'sabrinacarpenter@yahoo.com', 7, 4),
+(8, 'Abel', 'Tesfaye', 'Canada', 30, '0987654321', 'theweeknd@yahoo.com', 8, 5),
+(9, 'Yoann', 'Lemoine', 'Poland', 30, '0987654321', 'woodkid@yahoo.com', 10, 6);
 
 -- Insert into Genre
 INSERT INTO "Genre" ("GenreID", "Name")
@@ -330,7 +335,37 @@ VALUES
 (28,'2017-02-11', 3, 3, 'Pride (Song)'),
 (29,'2017-02-11', 3, 3, 'Pride (Video)'),
 --ft drake
-(30,'2012-04-16', 3, 3, 'Poetic Justice (Song)');
+(30,'2012-04-16', 3, 3, 'Poetic Justice (Song)'),
+--sabrina
+(31,'2022-05-15', 4, 1, 'Singular Act I (Album)'),
+(32,'2022-05-15', 4, 1, 'Almost Love (Song)'),
+(33,'2022-05-15', 4, 1, 'Almost Love (Video)'),
+(34,'2022-05-15', 4, 1, 'Hold Tight (Song)'),
+(35,'2022-05-15', 4, 1, 'Singular Act II (Album)'),
+(36,'2022-05-15', 4, 1, 'In My Bed (Song)'),
+(37,'2022-05-15', 4, 1, 'Pushing 20 (Song)'),
+(38,'2022-05-15', 4, 1, 'Tell Em (Song)'),
+(39,'2022-05-15', 4, 1, 'Tell Em (Video)'),
+--weeknd
+(40,'2020-05-20',5, 1, 'After Hours (Album)'),
+(41,'2020-05-20',5, 1, 'Alone Again (Song)'),
+(42,'2020-05-20',5, 1, 'Too Late (Song)'),
+(43,'2020-05-20',5, 1, 'Snowchild (Song)'),
+(44,'2020-05-20',5, 1, 'Snowchild (Video)'),
+(45,'2022-11-20',5, 1, 'DawnFM (Album)'),
+(46,'2022-11-20',5, 1, 'Take My Breath (Song)'),
+(47,'2022-11-20',5, 1, 'Take My Breath (Video)'),
+(48,'2022-11-20',5, 1, 'Out of Time (Song)'),
+(49,'2022-11-20',5, 1, 'Best Friends (Song)'),
+--woodkid
+(50,'2020-03-30',6, 2, 'S16 (Album)'),
+(51,'2020-03-30',6, 2, 'Goliath (Song))'),
+(52,'2020-03-30',6, 2, 'Enemy (Song)'),
+(53,'2020-03-30',6, 2, 'Shift (Song)'),
+(54,'2013-07-15',6, 2, 'The Golden Age (Album)'),
+(55,'2013-07-15',6, 2, 'The Golden Age (Song)'),
+(56,'2013-07-15',6, 2, 'I Love You (Song)'),
+(57,'2013-07-15',6, 2, 'Shadows (Song)');
 
 
 
@@ -366,8 +401,39 @@ VALUES
 (3,27),
 (3,28),
 (3,29),
+--basically poetic song has kendrick ft drake
 (3,30),
-(2,30);
+(2,30),
+--
+(4,31),
+(4,32),
+(4,33),
+(4,34),
+(4,35),
+(4,36),
+(4,37),
+(4,38),
+(4,39),
+(5,40),
+(5,41),
+(5,42),
+(5,43),
+(5,44),
+(5,45),
+(5,46),
+(5,47),
+(5,48),
+(5,49),
+(6,50),
+(6,51),
+(6,52),
+(6,53),
+(6,54),
+(6,55),
+(6,56),
+(6,57);
+
+
 
 -- Insert into Song
 INSERT INTO "Song" ("SongID", "ProjectID", "Duration", "Rating", "Plays")
@@ -392,17 +458,41 @@ VALUES
 (16, 24,180, 1, 1100),
 (17, 26,180, 1, 1100),
 (18, 28,180, 1, 1100),
---solo
-(19, 30,180, 1, 1100);
+--ft drake
+(19, 30,180, 1, 1100),
+--sabrina
+(20, 32,180, 1, 1100),
+(21, 34,180, 1, 1100),
+(22, 36,180, 1, 1100),
+(23, 37,180, 1, 1100),
+(24, 38,180, 1, 1100),
+--weeknd
+(25, 41,180, 1, 1100),
+(26, 42,180, 1, 1100),
+(27, 43,180, 1, 1100),
+(28, 46,180, 1, 1100),
+(29, 48,180, 1, 1100),
+(30, 49,180, 1, 1100),
+--woodkid
+(31, 51,180, 1, 1100),
+(32, 52,180, 1, 1100),
+(33, 53,180, 1, 1100),
+(34, 55,180, 1, 1100),
+(35, 56,180, 1, 1100),
+(36, 57,180, 1, 1100);
 
 -- Insert into Video
-INSERT INTO "Video" ("VideoID", "ProjectID", "SongID", "Rating", "Views")
+INSERT INTO "Video" ("VideoID", "ProjectID", "SongID", "Rating", "Views","Duration")
 VALUES
-(1, 12, 8, 4.5, 2000),
-(2, 16, 10, 4.0, 1500),
-(3, 22, 14, 4.0, 1500),
-(4, 27, 17, 4.0, 1500),
-(5, 29, 18, 4.0, 1500);
+(1, 12, 8, 4.5, 2000,0),
+(2, 16, 10, 4.0, 1500,0),
+(3, 22, 14, 4.0, 1500,0),
+(4, 27, 17, 4.0, 1500,0),
+(5, 29, 18, 4.0, 1500,0),
+(6, 33, 20, 4.0, 1500,0),
+(7, 39, 24, 4.0, 1500,0),
+(8, 44, 27, 4.0, 1500,0),
+(9, 47, 28, 4.0, 1500,0);
 
 -- Insert into Album
 INSERT INTO "Album" ("AlbID", "ProjectID", "Rating")
@@ -412,7 +502,13 @@ VALUES
 (3, 9, 3.0),
 (4, 14, 4.0),
 (5, 19, 4.5),
-(6, 25, 5.0);
+(6, 25, 5.0),
+(7, 31, 5.0),
+(8, 35, 5.0),
+(9, 40, 5.0),
+(10, 45, 5.0),
+(11, 50, 5.0),
+(12, 54, 5.0);
 
 -- Insert into Format
 INSERT INTO "Format" ("FormID","Description")
@@ -428,21 +524,39 @@ VALUES
 (1,1),
 (2,1),
 (3,1),
-(4,1),
-(5,1),
-(6,1),
-(7,2),
-(8,2),
-(9,2),
-(10,2),
-(11,2),
-(12,2),
-(13,3),
-(14,3),
-(15,3),
-(16,3),
-(17,3),
-(18,3);
+(4,2),
+(5,2),
+(6,2),
+(7,3),
+(8,3),
+(9,3),
+(10,4),
+(11,4),
+(12,4),
+(13,5),
+(14,5),
+(15,5),
+(16,5),
+(17,6),
+(18,6),
+(20,7),
+(21,7),
+(22,8),
+(23,8),
+(24,8),
+(25,9),
+(26,9),
+(27,9),
+(28,10),
+(29,10),
+(30,10),
+(31,11),
+(32,11),
+(33,11),
+(34,12),
+(35,12),
+(36,12);
+
 
 -- Insert into Vinyl
 INSERT INTO "Vinyl" ("AlbID","FormID", "Cost", "Sales")

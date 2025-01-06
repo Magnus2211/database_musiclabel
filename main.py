@@ -13,7 +13,7 @@ def show_main_menu():
         widget.destroy()
 
     # Create and style the main menu buttons
-    title_label = tk.Label(root, text="Welcome to the Application", font=("Helvetica", 16, "bold"), fg="blue")
+    title_label = tk.Label(root, text="DG Music Company", font=("Helvetica", 16, "bold"), fg="blue")
     title_label.pack(pady=20)
 
     login_button = tk.Button(root, text="Login", command=show_login_screen)

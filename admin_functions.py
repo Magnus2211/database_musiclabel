@@ -836,6 +836,7 @@ def show_project_insert_form(root):
             return
 
         project_type = project_type_var.get()
+        data["Title"] += f" ({project_type})"  # Append project type to the title
 
         try:
             conn = connect_db()
@@ -946,9 +947,11 @@ def show_project_insert_form(root):
 
             conn.commit()
         except sqlite3.Error as e:
+            print(f"Database error occurred: {e}")
             messagebox.showerror("Error", f"Failed to insert project: {e}")
         finally:
             conn.close()
+
 
 
     save_button = tk.Button(root, text="Save", font=("Helvetica", 12), bg="lightblue", relief="raised", command=save_project)
@@ -1196,281 +1199,491 @@ def show_associate_screen(root, create_admin_window):
 
 #--------------BETTER VIEW
 def show_better_view(root, create_admin_window):
+    """Show a better view with releases categorized into Albums, Singles, and Videos."""
     # Clear the window
     clear(root)
 
+    # Title Frame
+    title_frame = tk.Frame(root)
+    title_frame.pack(fill="x", pady=10)
+
     # Title Label
-    title_label = tk.Label(root, text="Better View", font=("Helvetica", 16, "bold"), fg="blue")
-    title_label.pack(pady=20)
+    title_label = tk.Label(title_frame, text="Better View", font=("Helvetica", 16, "bold"), fg="blue")
+    title_label.pack(side="left", padx=10)
 
-    # Artist Nickname Search Entry
-    search_frame = tk.Frame(root)
-    search_frame.pack(fill="x", pady=10)
-
-    search_label = tk.Label(search_frame, text="Artist Nickname:", font=("Helvetica", 12))
-    search_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
-
-    search_entry = tk.Entry(search_frame, font=("Helvetica", 12))
-    search_entry.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
-
-    search_button = tk.Button(
-        search_frame, text="Search", font=("Helvetica", 12), bg="lightblue", relief="raised", command=lambda: search_artist()
-    )
-    search_button.grid(row=0, column=2, padx=10, pady=5)
-
+    # Back Button
     back_button = tk.Button(
-        search_frame, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised", command=lambda: go_back(root, create_admin_window)
+        title_frame, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised",
+        command=lambda: go_back(root, create_admin_window)
     )
-    back_button.grid(row=0, column=3, padx=10, pady=5)
+    back_button.pack(side="right", padx=10)
 
-    # Make the search_entry expandable
-    search_frame.grid_columnconfigure(1, weight=1)
+    # Main Frame
+    main_frame = tk.Frame(root)
+    main_frame.pack(fill="both", expand=True)
 
-    # Treeview to display albums and songs
-    tree_frame = tk.Frame(root)
-    tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
+    # Sidebar for categories
+    sidebar = ttk.Treeview(main_frame, columns=("Count"), show="tree", height=20)
+    sidebar.column("#0", width=200, anchor="w")
+    sidebar.heading("#0", text="Categories")
+    sidebar.column("Count", width=50, anchor="center")
+    sidebar.heading("Count", text="Count")
+    sidebar.grid(row=0, column=0, sticky="ns", padx=10, pady=10)
 
-    tree = ttk.Treeview(tree_frame, columns=("Duration", "Rating", "Views"), show="tree headings", height=20)
-    tree.column("#0", width=300, anchor="w")
-    tree.heading("#0", text="Albums and Songs")
-    tree.column("Duration", width=100, anchor="center")
-    tree.heading("Duration", text="Duration")
-    tree.column("Rating", width=100, anchor="center")
-    tree.heading("Rating", text="Rating")
-    tree.column("Views", width=100, anchor="center")
-    tree.heading("Views", text="Views")
-    tree.pack(fill="both", expand=True)
+    # Content Area
+    content_frame = tk.Frame(main_frame)
+    content_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+    main_frame.grid_rowconfigure(0, weight=1)
+    main_frame.grid_columnconfigure(1, weight=1)
 
-    # Scrollbar
-    scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
-    tree.configure(yscroll=scrollbar.set)
+    # Treeview for displaying details
+    details_tree = ttk.Treeview(content_frame, columns=("Type", "Artist", "Genre", "Details"), show="tree headings", height=20)
+    details_tree.column("#0", width=300, anchor="w")
+    details_tree.heading("#0", text="Releases")
+    details_tree.column("Type", width=100, anchor="center")
+    details_tree.heading("Type", text="Type")
+    details_tree.column("Artist", width=150, anchor="center")
+    details_tree.heading("Artist", text="Artist")
+    details_tree.column("Genre", width=100, anchor="center")
+    details_tree.heading("Genre", text="Genre")
+    details_tree.column("Details", width=300, anchor="w")
+    details_tree.heading("Details", text="Details")
+    details_tree.pack(fill="both", expand=True)
+
+    # Scrollbar for details_tree
+    scrollbar = ttk.Scrollbar(content_frame, orient="vertical", command=details_tree.yview)
+    details_tree.configure(yscroll=scrollbar.set)
     scrollbar.pack(side="right", fill="y")
 
-    def search_artist():
-        artist_nickname = search_entry.get().strip()
-        if not artist_nickname:
-            messagebox.showerror("Error", "Please enter an artist nickname.")
-            return
+    # Database connection and data fetching
+    try:
+        conn = sqlite3.connect("db.db")
+        cursor = conn.cursor()
 
-        # Clear existing data in the tree
-        for item in tree.get_children():
-            tree.delete(item)
+        # Fetch counts for categories
+        cursor.execute("SELECT COUNT(*) FROM Album")
+        album_count = cursor.fetchone()[0]
+
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM Song 
+            WHERE SongID NOT IN (
+                SELECT SongID 
+                FROM Is_part_of
+            ) 
+            AND ProjectID IN (
+                SELECT ProjectID 
+                FROM Project
+            )
+        """)
+        single_count = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM Video")
+        video_count = cursor.fetchone()[0]
+
+        # Populate sidebar
+        sidebar.insert("", "end", "releases", text="Releases", values=(album_count + single_count + video_count))
+        sidebar.insert("releases", "end", "albums", text="Albums", values=(album_count))
+        sidebar.insert("releases", "end", "singles", text="Singles", values=(single_count))
+        sidebar.insert("releases", "end", "videos", text="Videos", values=(video_count))
+
+    except sqlite3.Error as e:
+        messagebox.showerror("Error", f"Database error: {e}")
+    finally:
+        conn.close()
+
+    def load_details(category):
+        """Load details based on the selected category."""
+        # Clear the details tree before populating
+        for item in details_tree.get_children():
+            details_tree.delete(item)
 
         try:
             conn = sqlite3.connect("db.db")
             cursor = conn.cursor()
 
-            # Fetch the ArtID for the given artist nickname
-            cursor.execute("SELECT ArtID FROM Artist WHERE Nickname = ?", (artist_nickname,))
-            artist = cursor.fetchone()
-            if not artist:
-                messagebox.showerror("Error", "Artist not found.")
-                return
-
-            art_id = artist[0]
-
-            # Fetch albums associated with the artist
-            cursor.execute(
-                """
-                SELECT Album.AlbID, Project.Title
-                FROM Album
-                JOIN Project ON Album.ProjectID = Project.ProjectID
-                WHERE Project.ArtID = ?
-                """,
-                (art_id,),
-            )
-            albums = cursor.fetchall()
-
-            if not albums:
-                messagebox.showinfo("Info", "No albums found for this artist.")
-                return
-
-            # Add albums to the tree
-            for album_id, album_title in albums:
-                album_node = tree.insert("", "end", text=album_title, open=False)
-
-                # Fetch songs in the album
-                cursor.execute(
-                    """
+            if category == "albums":
+                # Fetch albums and their songs
+                cursor.execute("""
                     SELECT 
-                        Project.Title, 
+                        Album.AlbID, 
+                        Project.Title AS AlbumTitle, 
+                        Artist.Nickname AS Artist, 
+                        Genre.Name AS Genre
+                    FROM Album
+                    JOIN Project ON Album.ProjectID = Project.ProjectID
+                    JOIN Artist ON Project.ArtID = Artist.ArtID
+                    JOIN Genre ON Project.GenreID = Genre.GenreID
+                """)
+                albums = cursor.fetchall()
+
+                for album_id, album_title, artist, genre in albums:
+                    # Add album as parent node
+                    album_node = details_tree.insert("", "end", text=f"{album_title}", values=("Album", artist, genre, ""))
+
+                    # Fetch songs in the album
+                    cursor.execute("""
+                        SELECT 
+                            Project.Title AS SongTitle, 
+                            Song.Duration, 
+                            Song.Rating, 
+                            Song.Plays, 
+                            Artist.Nickname AS Artist
+                        FROM Song
+                        JOIN Project ON Song.ProjectID = Project.ProjectID
+                        JOIN Is_part_of ON Song.SongID = Is_part_of.SongID
+                        JOIN Artist ON Project.ArtID = Artist.ArtID
+                        WHERE Is_part_of.AlbID = ?
+                    """, (album_id,))
+                    songs = cursor.fetchall()
+
+                    for song_title, duration, rating, plays, song_artist in songs:
+                        mins, secs = divmod(duration, 60)
+                        song_details = f"Duration: {mins}:{secs:02d}, Rating: {rating}, Plays: {plays}"
+                        details_tree.insert(album_node, "end", text=f"{song_title}", values=("Song", song_artist, "", song_details))
+
+            elif category == "singles":
+                # Fetch singles
+                cursor.execute("""
+                    SELECT 
+                        Project.Title AS SingleTitle, 
+                        Artist.Nickname AS Artist, 
+                        Genre.Name AS Genre, 
                         Song.Duration, 
                         Song.Rating, 
-                        COALESCE(Video.Views, 0) AS Views
+                        Song.Plays
                     FROM Song
                     JOIN Project ON Song.ProjectID = Project.ProjectID
-                    JOIN Is_part_of ON Song.SongID = Is_part_of.SongID
-                    LEFT JOIN Video ON Video.SongID = Song.SongID
-                    WHERE Is_part_of.AlbID = ?
-                    """,
-                    (album_id,),
-                )
-                songs = cursor.fetchall()
+                    JOIN Artist ON Project.ArtID = Artist.ArtID
+                    JOIN Genre ON Project.GenreID = Genre.GenreID
+                    LEFT JOIN Is_part_of ON Song.SongID = Is_part_of.SongID
+                    WHERE Is_part_of.SongID IS NULL
+                """)
+                singles = cursor.fetchall()
 
-                for song_title, duration, rating, views in songs:
-                    # Convert duration to minutes:seconds
-                    minutes = duration // 60
-                    seconds = duration % 60
-                    duration_formatted = f"{minutes}:{seconds:02}"
+                for single_title, artist, genre, duration, rating, plays in singles:
+                    mins, secs = divmod(duration, 60)
+                    single_details = f"Duration: {mins}:{secs:02d}, Rating: {rating}, Plays: {plays}"
+                    details_tree.insert("", "end", text=f"{single_title}", values=("Single", artist, genre, single_details))
 
-                    # Add song details as a child node
-                    tree.insert(
-                        album_node,
-                        "end",
-                        text=song_title,
-                        values=(duration_formatted, f"{rating:.1f}", views),
-                    )
+            elif category == "videos":
+                # Fetch videos
+                cursor.execute("""
+                    SELECT 
+                        Project.Title AS VideoTitle, 
+                        Artist.Nickname AS Artist, 
+                        Genre.Name AS Genre, 
+                        Video.Rating, 
+                        Video.Views
+                    FROM Video
+                    JOIN Project ON Video.ProjectID = Project.ProjectID
+                    JOIN Artist ON Project.ArtID = Artist.ArtID
+                    JOIN Genre ON Project.GenreID = Genre.GenreID
+                """)
+                videos = cursor.fetchall()
+
+                for video_title, artist, genre, rating, views in videos:
+                    video_details = f"Rating: {rating}, Views: {views}"
+                    details_tree.insert("", "end", text=f"{video_title}", values=("Video", artist, genre, video_details))
 
         except sqlite3.Error as e:
             messagebox.showerror("Error", f"Database error: {e}")
         finally:
             conn.close()
 
+    def on_sidebar_select(event):
+        """Handle sidebar selection and load corresponding details."""
+        selected_item = sidebar.focus()
+        if selected_item in ["albums", "singles", "videos"]:
+            load_details(selected_item)
 
-        # Search Button
-        search_button = tk.Button(search_frame, text="Search", font=("Helvetica", 12), bg="lightblue", relief="raised", command=search_artist)
-        search_button.grid(row=0, column=2, padx=10, pady=5)
+    sidebar.bind("<<TreeviewSelect>>", on_sidebar_select)
+
+
+
+
 
 
 
 #-----------DELETE FUNCTION
 
 def show_delete_screen(root, create_admin_window):
+    """
+    Display the delete screen with options to delete an Individual, Project, or Partner.
+    """
+    clear(root)  # Clear existing widgets on the screen
+
+    # Title Frame
+    title_frame = tk.Frame(root)
+    title_frame.pack(fill="x", pady=10)
+
+    # Title Label
+    delete_label = tk.Label(title_frame, text="Delete Records", font=("Helvetica", 16, "bold"), fg="blue")
+    delete_label.pack(side="left", padx=10)
+
+    # Back Button
+    back_button = tk.Button(
+        title_frame, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised",
+        command=lambda: go_back(root, create_admin_window)
+    )
+    back_button.pack(side="right", padx=10)
+
+    # Combobox for selecting the delete option
+    delete_type_label = tk.Label(root, text="Select Record Type to Delete:", font=("Helvetica", 12))
+    delete_type_label.pack(pady=10)
+
+    delete_var = tk.StringVar()
+    delete_combobox = ttk.Combobox(root, textvariable=delete_var, state="readonly", font=("Helvetica", 12))
+    delete_combobox['values'] = ["Individual", "Project", "Partner"]
+    delete_combobox.pack(pady=10)
+
+    # Frame for dynamic input fields
+    dynamic_frame = tk.Frame(root)
+    dynamic_frame.pack(pady=20)
+
+    def update_dynamic_fields(*args):
         """
-        Display the delete screen with options to delete an Individual, Song, or Partner.
+        Update input fields dynamically based on the selected delete option.
         """
-        for widget in root.winfo_children():
+        for widget in dynamic_frame.winfo_children():
             widget.destroy()
 
-        # Title label
-        delete_label = tk.Label(root, text="Delete Records", font=("Helvetica", 16, "bold"), fg="blue")
-        delete_label.pack(pady=20)
+        delete_type = delete_var.get()
 
-        # Combobox for selecting the delete option
-        delete_type_label = tk.Label(root, text="Select Record Type to Delete:", font=("Helvetica", 12))
-        delete_type_label.pack(pady=10)
+        if delete_type == "Individual":
+            # Individual deletion
+            id_label = tk.Label(dynamic_frame, text="Enter Individual ID:", font=("Helvetica", 12))
+            id_label.grid(row=0, column=0, padx=10, pady=5, sticky="e")
+            id_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
+            id_entry.grid(row=0, column=1, padx=10, pady=5)
 
-        delete_var = tk.StringVar()
-        delete_combobox = ttk.Combobox(root, textvariable=delete_var, state="readonly", font=("Helvetica", 12))
-        delete_combobox['values'] = ["Individual", "Song", "Partner"]
-        delete_combobox.pack(pady=10)
+            def delete_individual():
+                individ_id = id_entry.get().strip()
+                if not individ_id.isdigit():
+                    messagebox.showerror("Error", "Please enter a valid Individual ID.")
+                    return
 
-        # Frame for dynamic input fields
-        dynamic_frame = tk.Frame(root)
-        dynamic_frame.pack(pady=20)
+                try:
+                    conn = sqlite3.connect("db.db")
+                    cursor = conn.cursor()
 
-        def update_dynamic_fields(*args):
-            """
-            Update input fields dynamically based on the selected delete option.
-            """
-            for widget in dynamic_frame.winfo_children():
-                widget.destroy()
-
-            delete_type = delete_var.get()
-
-            if delete_type == "Individual":
-                # Individual deletion
-                id_label = tk.Label(dynamic_frame, text="Enter Individual ID:", font=("Helvetica", 12))
-                id_label.grid(row=0, column=0, padx=10, pady=5, sticky="e")
-                id_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
-                id_entry.grid(row=0, column=1, padx=10, pady=5)
-
-                def delete_individual():
-                    individ_id = id_entry.get().strip()
-                    if not individ_id.isdigit():
-                        messagebox.showerror("Error", "Please enter a valid Individual ID.")
+                    # Check if the individual exists
+                    cursor.execute("SELECT * FROM Individual WHERE IndividID = ?", (int(individ_id),))
+                    individual = cursor.fetchone()
+                    if not individual:
+                        messagebox.showerror("Error", "Individual not found.")
                         return
 
-                    try:
-                        conn = sqlite3.connect("db.db")
-                        cursor = conn.cursor()
-                        cursor.execute("DELETE FROM Individual WHERE IndividID = ?", (int(individ_id),))
-                        conn.commit()
+                    # Proceed with deletion
+                    cursor.execute("DELETE FROM Individual WHERE IndividID = ?", (int(individ_id),))
+                    conn.commit()
+                    messagebox.showinfo("Success", "Individual deleted successfully.")
+                except sqlite3.Error as e:
+                    print(f"Error: {e}")
+                    messagebox.showerror("Error", f"Database error: {e}")
+                finally:
+                    conn.close()
 
-                        if cursor.rowcount > 0:
-                            messagebox.showinfo("Success", "Individual deleted successfully.")
-                        else:
-                            messagebox.showerror("Error", "Individual not found.")
-                    except sqlite3.Error as e:
-                        messagebox.showerror("Error", f"Database error: {e}")
-                    finally:
-                        conn.close()
+            delete_button = tk.Button(dynamic_frame, text="Delete", font=("Helvetica", 12), bg="red", relief="raised", command=delete_individual)
+            delete_button.grid(row=1, column=0, columnspan=2, pady=10)
 
-                delete_button = tk.Button(dynamic_frame, text="Delete", font=("Helvetica", 12), bg="red", relief="raised", command=delete_individual)
-                delete_button.grid(row=1, column=0, columnspan=2, pady=10)
+        elif delete_type == "Project":
+            # Project deletion
+            title_label = tk.Label(dynamic_frame, text="Enter Album Title:", font=("Helvetica", 12))
+            title_label.grid(row=0, column=0, padx=10, pady=5, sticky="e")
+            title_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
+            title_entry.grid(row=0, column=1, padx=10, pady=5)
 
-            elif delete_type == "Song":
-                # Song deletion
-                title_label = tk.Label(dynamic_frame, text="Enter Song Title:", font=("Helvetica", 12))
-                title_label.grid(row=0, column=0, padx=10, pady=5, sticky="e")
-                title_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
-                title_entry.grid(row=0, column=1, padx=10, pady=5)
+            def delete_album():
+                album_title = title_entry.get().strip()
+                if not album_title:
+                    messagebox.showerror("Error", "Please enter a valid Album Title.")
+                    return
 
-                def delete_song():
-                    song_title = title_entry.get().strip()
-                    if not song_title:
-                        messagebox.showerror("Error", "Please enter a valid Song Title.")
+                try:
+                    conn = sqlite3.connect("db.db")
+                    cursor = conn.cursor()
+
+                    # Check if the album exists
+                    cursor.execute("""
+                        SELECT Album.AlbID, Album.ProjectID
+                        FROM Album
+                        JOIN Project ON Album.ProjectID = Project.ProjectID
+                        WHERE Project.Title = ?
+                    """, (album_title,))
+                    album = cursor.fetchone()
+                    if not album:
+                        messagebox.showerror("Error", "Album not found.")
                         return
 
-                    try:
-                        conn = sqlite3.connect("db.db")
-                        cursor = conn.cursor()
+                    album_id, project_id = album
+
+                    # Ask whether to preserve the songs
+                    response = messagebox.askyesnocancel(
+                        "Preserve Songs",
+                        "Do you want to preserve the songs in the database?"
+                    )
+
+                    if response is None:
+                        # User clicked "Cancel"
+                        return
+                    elif response:
+                        # Update the songs to become singles unless they are in another album
                         cursor.execute("""
-                            DELETE FROM Song 
-                            WHERE SongID IN (
-                                SELECT SongID 
-                                FROM Project 
-                                WHERE Title = ?
+                            SELECT SongID 
+                            FROM Is_part_of 
+                            WHERE AlbID = ?
+                        """, (album_id,))
+                        songs = cursor.fetchall()
+
+                        for song in songs:
+                            song_id = song[0]
+
+                            # Check if the song is part of another album
+                            cursor.execute("""
+                                SELECT AlbID 
+                                FROM Is_part_of 
+                                WHERE SongID = ? AND AlbID != ?
+                            """, (song_id, album_id))
+                            is_in_other_album = cursor.fetchone()
+
+                            if not is_in_other_album:
+                                # Remove association with the current album, making it a single
+                                cursor.execute("""
+                                    DELETE FROM Is_part_of 
+                                    WHERE SongID = ? AND AlbID = ?
+                                """, (song_id, album_id))
+
+                    else:
+                        # Fetch songs associated with the album
+                        cursor.execute("""
+                            SELECT SongID 
+                            FROM Is_part_of 
+                            WHERE AlbID = ?
+                        """, (album_id,))
+                        songs = cursor.fetchall()
+
+                        shared_songs = []
+                        exclusive_songs = []
+
+                        for song in songs:
+                            song_id = song[0]
+
+                            # Check if the song is part of another album
+                            cursor.execute("""
+                                SELECT AlbID 
+                                FROM Is_part_of 
+                                WHERE SongID = ? AND AlbID != ?
+                            """, (song_id, album_id))
+                            is_in_other_album = cursor.fetchone()
+
+                            if is_in_other_album:
+                                shared_songs.append(song_id)
+                            else:
+                                exclusive_songs.append(song_id)
+
+                        if shared_songs:
+                            # Ask the user if they want to delete shared songs as well
+                            shared_response = messagebox.askyesnocancel(
+                                "Shared Songs Detected",
+                                "There are songs that appear on other albums as well. Delete those as well?"
                             )
-                        """, (song_title,))
-                        conn.commit()
+                            if shared_response is None:
+                                # User clicked "Cancel"
+                                return
+                            elif shared_response:
+                                # Delete shared songs from all albums and the project table
+                                for song_id in shared_songs:
+                                    # Remove associations with all albums
+                                    cursor.execute("""
+                                        DELETE FROM Is_part_of 
+                                        WHERE SongID = ?
+                                    """, (song_id,))
+                                    
+                                    # Delete the song from the Project table
+                                    cursor.execute("""
+                                        DELETE FROM Project 
+                                        WHERE ProjectID IN (
+                                            SELECT ProjectID 
+                                            FROM Song 
+                                            WHERE SongID = ?
+                                        )
+                                    """, (song_id,))
+                            else:
+                                # Do not delete shared songs; just remove association with this album
+                                for song_id in shared_songs:
+                                    cursor.execute("""
+                                        DELETE FROM Is_part_of 
+                                        WHERE SongID = ? AND AlbID = ?
+                                    """, (song_id, album_id))
 
-                        if cursor.rowcount > 0:
-                            messagebox.showinfo("Success", "Song deleted successfully.")
-                        else:
-                            messagebox.showerror("Error", "Song not found.")
-                    except sqlite3.Error as e:
-                        messagebox.showerror("Error", f"Database error: {e}")
-                    finally:
-                        conn.close()
+                        # Delete exclusive songs from the Project table
+                        for song_id in exclusive_songs:
+                            cursor.execute("""
+                                DELETE FROM Project 
+                                WHERE ProjectID IN (
+                                    SELECT ProjectID 
+                                    FROM Song 
+                                    WHERE SongID = ?
+                                )
+                            """, (song_id,))
 
-                delete_button = tk.Button(dynamic_frame, text="Delete", font=("Helvetica", 12), bg="red", relief="raised", command=delete_song)
-                delete_button.grid(row=1, column=0, columnspan=2, pady=10)
+                    # Delete the album itself
+                    cursor.execute("DELETE FROM Album WHERE AlbID = ?", (album_id,))
+                    cursor.execute("DELETE FROM Project WHERE ProjectID = ?", (project_id,))
+                    conn.commit()
+                    messagebox.showinfo("Success", "Album and associated changes applied successfully.")
+                except sqlite3.Error as e:
+                    print(f"Error: {e}")
+                    messagebox.showerror("Error", f"Database error: {e}")
+                finally:
+                    conn.close()
 
-            elif delete_type == "Partner":
-                # Partner deletion
-                id_label = tk.Label(dynamic_frame, text="Enter Partner ID:", font=("Helvetica", 12))
-                id_label.grid(row=0, column=0, padx=10, pady=5, sticky="e")
-                id_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
-                id_entry.grid(row=0, column=1, padx=10, pady=5)
 
-                def delete_partner():
-                    partner_id = id_entry.get().strip()
-                    if not partner_id.isdigit():
-                        messagebox.showerror("Error", "Please enter a valid Partner ID.")
+
+
+            # Ensure the button is properly placed
+            delete_button = tk.Button(dynamic_frame, text="Delete", font=("Helvetica", 12), bg="red", relief="raised", command=delete_album)
+            delete_button.grid(row=1, column=0, columnspan=2, pady=10)
+
+
+        elif delete_type == "Partner":
+            # Partner deletion
+            id_label = tk.Label(dynamic_frame, text="Enter Partner ID:", font=("Helvetica", 12))
+            id_label.grid(row=0, column=0, padx=10, pady=5, sticky="e")
+            id_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
+            id_entry.grid(row=0, column=1, padx=10, pady=5)
+
+            def delete_partner():
+                partner_id = id_entry.get().strip()
+                if not partner_id.isdigit():
+                    messagebox.showerror("Error", "Please enter a valid Partner ID.")
+                    return
+
+                try:
+                    conn = sqlite3.connect("db.db")
+                    cursor = conn.cursor()
+
+                    # Check if the partner exists
+                    cursor.execute("SELECT * FROM Partner WHERE PartID = ?", (int(partner_id),))
+                    partner = cursor.fetchone()
+                    if not partner:
+                        messagebox.showerror("Error", "Partner not found.")
                         return
 
-                    try:
-                        conn = sqlite3.connect("db.db")
-                        cursor = conn.cursor()
-                        cursor.execute("DELETE FROM Partner WHERE PartID = ?", (int(partner_id),))
-                        conn.commit()
+                    # Proceed with deletion
+                    cursor.execute("DELETE FROM Partner WHERE PartID = ?", (int(partner_id),))
+                    conn.commit()
+                    messagebox.showinfo("Success", "Partner deleted successfully.")
+                except sqlite3.Error as e:
+                    print(f"Error: {e}")
+                    messagebox.showerror("Error", f"Database error: {e}")
+                finally:
+                    conn.close()
 
-                        if cursor.rowcount > 0:
-                            messagebox.showinfo("Success", "Partner deleted successfully.")
-                        else:
-                            messagebox.showerror("Error", "Partner not found.")
-                    except sqlite3.Error as e:
-                        messagebox.showerror("Error", f"Database error: {e}")
-                    finally:
-                        conn.close()
+            delete_button = tk.Button(dynamic_frame, text="Delete", font=("Helvetica", 12), bg="red", relief="raised", command=delete_partner)
+            delete_button.grid(row=1, column=0, columnspan=2, pady=10)
 
-                delete_button = tk.Button(dynamic_frame, text="Delete", font=("Helvetica", 12), bg="red", relief="raised", command=delete_partner)
-                delete_button.grid(row=1, column=0, columnspan=2, pady=10)
+    # Trace changes in combobox selection
+    delete_var.trace_add("write", update_dynamic_fields)
 
-        # Trace changes in combobox selection
-        delete_var.trace_add("write", update_dynamic_fields)
-
-        # Back button
-        back_button = tk.Button(root, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised", command=lambda: go_back(root, create_admin_window))
-        back_button.pack(pady=10)
