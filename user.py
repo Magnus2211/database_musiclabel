@@ -1,5 +1,5 @@
-import tkinter as tk
-from tkinter import messagebox, ttk
+import customtkinter as ctk
+from tkinter import ttk,messagebox
 import sqlite3
 import subprocess
 import sys
@@ -22,35 +22,27 @@ def show_main_screen():
     clear(root)
 
     # Title Label
-    title_label = tk.Label(root, text="Individual Panel", font=("Helvetica", 16, "bold"), fg="blue")
+    title_label = ctk.CTkLabel(root, text="Individual Panel", font=ctk.CTkFont(size=20, weight="bold"))
     title_label.pack(pady=20)
 
     # My Profile Button
-    profile_button = tk.Button(
-        root, text="My Profile", font=("Helvetica", 12), bg="lightblue", relief="raised", command=show_dashboard
-    )
+    profile_button = ctk.CTkButton(root, text="My Profile",fg_color="#0078D7", command=show_dashboard)
     profile_button.pack(pady=10)
 
     # Search Button
-    search_button = tk.Button(
-        root, text="Search", font=("Helvetica", 12), bg="lightgreen", relief="raised", command=show_search_screen
-    )
+    search_button = ctk.CTkButton(root, text="Search for Artist",fg_color="#17A2B8", command=show_search_screen)
     search_button.pack(pady=10)
 
     # Top 5 by Genre Button
-    top_5_button = tk.Button(
-        root, text="Top 5 by Genre", font=("Helvetica", 12), bg="lightyellow", relief="raised", command=show_top_5_screen
-    )
+    top_5_button = ctk.CTkButton(root, text="Top 5 by Genre",fg_color="#6F42C1", command=show_top_5_screen)
     top_5_button.pack(pady=10)
 
-    search_artist_button = tk.Button(root,text="Search for Artist",font=("Helvetica", 12),bg="lightblue",relief="raised",command=show_artist_search)
+    search_artist_button = ctk.CTkButton(root, text="Quick Search for Artist",fg_color="#28A745", command=quick_search_for_artist)
     search_artist_button.pack(pady=10)
 
     # Exit Button
-    exit_button = tk.Button(
-        root, text="Exit to Main", font=("Helvetica", 12), bg="lightcoral", relief="raised", command=exit_to_main
-    )
-    exit_button.pack(pady=10)
+    exit_button = ctk.CTkButton(root, text="Exit to Main", fg_color="#FFB300", command=exit_to_main)
+    exit_button.pack(pady=20)
 
 
 def show_dashboard():
@@ -61,14 +53,14 @@ def show_dashboard():
         cursor.execute("SELECT ArtID FROM Individual WHERE UserID = ?", (user_id,))
         artist = cursor.fetchone()
         if not artist:
-            messagebox.showerror("Error", "No associated artist found for the user.")
+            messagebox.showerror(title="Error", message="No associated artist found for the user.")
             return
 
         art_id = artist[0]
         show_artist_dashboard(art_id)
 
     except sqlite3.Error as e:
-        messagebox.showerror("Error", f"Database error: {e}")
+        messagebox.showerror(title="Error", message=f"Database error: {e}")
     finally:
         conn.close()
 
@@ -78,24 +70,24 @@ def show_search_screen():
     clear(root)
 
     # Title Label
-    title_label = tk.Label(root, text="Search for Artist", font=("Helvetica", 16, "bold"), fg="blue")
+    title_label = ctk.CTkLabel(root, text="Search for Artist", font=ctk.CTkFont(size=20, weight="bold"))
     title_label.pack(pady=20)
 
-    # Search Entry
-    search_frame = tk.Frame(root)
+    # Search Frame
+    search_frame = ctk.CTkFrame(root)
     search_frame.pack(pady=10)
 
-    search_label = tk.Label(search_frame, text="Artist Nickname:", font=("Helvetica", 12))
+    search_label = ctk.CTkLabel(search_frame, text="Artist Nickname:")
     search_label.grid(row=0, column=0, padx=10, pady=5)
 
-    search_entry = tk.Entry(search_frame, font=("Helvetica", 12))
+    search_entry = ctk.CTkEntry(search_frame, placeholder_text="Enter artist nickname")
     search_entry.grid(row=0, column=1, padx=10, pady=5)
 
     # Search Button
     def search_artist():
         artist_nickname = search_entry.get().strip()
         if not artist_nickname:
-            messagebox.showerror("Error", "Please enter an artist nickname.")
+            messagebox.showerror(title="Error", message="Please enter an artist nickname.")
             return
 
         try:
@@ -104,50 +96,50 @@ def show_search_screen():
             cursor.execute("SELECT ArtID FROM Artist WHERE Nickname = ?", (artist_nickname,))
             artist = cursor.fetchone()
             if not artist:
-                messagebox.showerror("Error", "Artist not found.")
+                messagebox.showerror(title="Error", message="Artist not found.")
                 return
 
             art_id = artist[0]
             show_artist_dashboard(art_id)
 
         except sqlite3.Error as e:
-            messagebox.showerror("Error", f"Database error: {e}")
+            messagebox.showerror(title="Error", message=f"Database error: {e}")
         finally:
             conn.close()
 
-    search_button = tk.Button(search_frame, text="Search", font=("Helvetica", 12), bg="lightgreen", relief="raised", command=search_artist)
+    search_button = ctk.CTkButton(search_frame, text="Search", command=search_artist)
     search_button.grid(row=0, column=2, padx=10, pady=5)
 
     # Back Button
-    back_button = tk.Button(root, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised", command=show_main_screen)
+    back_button = ctk.CTkButton(root, text="Back", fg_color="#FF6F61", command=show_main_screen)
     back_button.pack(pady=20)
+
 
 
 def show_artist_dashboard(art_id):
     """Displays the dashboard for a specific artist."""
-    for widget in root.winfo_children():
-        widget.destroy()
+    clear(root)
 
     # Title Frame
-    title_frame = tk.Frame(root)
+    title_frame = ctk.CTkFrame(root)
     title_frame.pack(pady=10, fill="x")
 
     # Title Label
-    title_label = tk.Label(title_frame, text="Artist Dashboard", font=("Helvetica", 16, "bold"), fg="blue")
+    title_label = ctk.CTkLabel(
+        title_frame, text="Artist Dashboard", font=ctk.CTkFont(size=20, weight="bold")
+    )
     title_label.pack(side="left", padx=(10, 20))
 
     # Back Button
-    back_button = tk.Button(
-        title_frame, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised", command=show_main_screen
-    )
-    back_button.pack(side="left")
+    back_button = ctk.CTkButton(title_frame, text="Back", fg_color="#FF6F61", command=show_main_screen)
+    back_button.pack(side="left", padx=10)
 
     # Main Frame
-    main_frame = tk.Frame(root)
+    main_frame = ctk.CTkFrame(root)
     main_frame.pack(fill="both", expand=True)
 
     # Sidebar for categories
-    sidebar = ttk.Treeview(main_frame, columns=("Count"), show="tree", height=20)
+    sidebar = ttk.Treeview(main_frame, columns=("Count"), show="tree")
     sidebar.column("#0", width=200, anchor="w")
     sidebar.heading("#0", text="Categories")
     sidebar.column("Count", width=50, anchor="center")
@@ -155,13 +147,13 @@ def show_artist_dashboard(art_id):
     sidebar.grid(row=0, column=0, sticky="ns", padx=10, pady=10)
 
     # Content Area
-    content_frame = tk.Frame(main_frame)
+    content_frame = ctk.CTkFrame(main_frame)
     content_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
     main_frame.grid_rowconfigure(0, weight=1)
     main_frame.grid_columnconfigure(1, weight=1)
 
     # Treeview to display details
-    details_tree = ttk.Treeview(content_frame, columns=("Details", "Genre"), show="tree", height=20)
+    details_tree = ttk.Treeview(content_frame, columns=("Details", "Genre"), show="tree")
     details_tree.column("#0", width=300, anchor="w")
     details_tree.heading("#0", text="Items")
     details_tree.column("Details", width=300, anchor="w")
@@ -182,13 +174,13 @@ def show_artist_dashboard(art_id):
         # Fetch counts for categories
         cursor.execute(
             "SELECT COUNT(*) FROM Album JOIN Project ON Album.ProjectID = Project.ProjectID WHERE Project.ArtID = ?",
-            (art_id,)
+            (art_id,),
         )
         album_count = cursor.fetchone()[0]
 
         cursor.execute(
             "SELECT COUNT(*) FROM Song JOIN Project ON Song.ProjectID = Project.ProjectID WHERE Project.ArtID = ?",
-            (art_id,)
+            (art_id,),
         )
         song_count = cursor.fetchone()[0]
 
@@ -199,13 +191,13 @@ def show_artist_dashboard(art_id):
             JOIN Project ON Song.ProjectID = Project.ProjectID
             WHERE Project.ArtID = ? AND Is_part_of.AlbID IS NULL
             """,
-            (art_id,)
+            (art_id,),
         )
         single_count = cursor.fetchone()[0]
 
         cursor.execute(
             "SELECT COUNT(*) FROM Video JOIN Project ON Video.ProjectID = Project.ProjectID WHERE Project.ArtID = ?",
-            (art_id,)
+            (art_id,),
         )
         video_count = cursor.fetchone()[0]
 
@@ -217,12 +209,13 @@ def show_artist_dashboard(art_id):
         sidebar.insert("releases", "end", "videos", text="Videos", values=(video_count))
 
     except sqlite3.Error as e:
-        messagebox.showerror("Error", f"Database error: {e}")
+        messagebox.showerror(title="Error", message=f"Database error: {e}")
     finally:
         conn.close()
 
     def load_details(category):
         """Load details based on the selected category."""
+        # Clear existing details in the tree
         for item in details_tree.get_children():
             details_tree.delete(item)
 
@@ -231,7 +224,7 @@ def show_artist_dashboard(art_id):
             cursor = conn.cursor()
 
             if category == "albums":
-                # Fetch albums
+                # Fetch albums for the artist
                 cursor.execute(
                     """
                     SELECT Album.AlbID, Project.Title, Genre.Name
@@ -240,11 +233,18 @@ def show_artist_dashboard(art_id):
                     JOIN Genre ON Project.GenreID = Genre.GenreID
                     WHERE Project.ArtID = ?
                     """,
-                    (art_id,)
+                    (art_id,),
                 )
                 albums = cursor.fetchall()
+                print("Albums fetched:", albums)  # Debugging: Print fetched albums
+
+                if not albums:
+                    print("No albums found for ArtID:", art_id)  # Debugging: Notify if no albums found
+
                 for album_id, album_title, genre in albums:
+                    # Insert album details into the treeview
                     album_node = details_tree.insert("", "end", text=album_title, values=("", genre))
+                    print(f"Album added: {album_title}, Genre: {genre}")  # Debugging: Confirm album added
 
                     # Fetch songs in the album
                     cursor.execute(
@@ -256,14 +256,16 @@ def show_artist_dashboard(art_id):
                         JOIN Genre ON Project.GenreID = Genre.GenreID
                         WHERE Is_part_of.AlbID = ?
                         """,
-                        (album_id,)
+                        (album_id,),
                     )
                     songs = cursor.fetchall()
+                    print(f"Songs in album {album_title}: {songs}")  # Debugging: Print songs for the album
 
                     for song_title, duration, rating, plays, song_genre in songs:
                         mins, secs = divmod(duration, 60)
                         song_details = f"Duration: {mins}:{secs:02d}, Rating: {rating}, Plays: {plays}"
                         details_tree.insert(album_node, "end", text=song_title, values=(song_details, song_genre))
+
             elif category == "singles":
                 # Fetch singles
                 cursor.execute(
@@ -275,13 +277,16 @@ def show_artist_dashboard(art_id):
                     JOIN Genre ON Project.GenreID = Genre.GenreID
                     WHERE Project.ArtID = ? AND Is_part_of.AlbID IS NULL
                     """,
-                    (art_id,)
+                    (art_id,),
                 )
                 singles = cursor.fetchall()
+                print("Singles fetched:", singles)  # Debugging: Print singles data
+
                 for song_title, duration, rating, plays, genre in singles:
                     mins, secs = divmod(duration, 60)
                     song_details = f"Duration: {mins}:{secs:02d}, Rating: {rating}, Plays: {plays}"
                     details_tree.insert("", "end", text=song_title, values=(song_details, genre))
+
             elif category == "songs":
                 # Fetch all songs
                 cursor.execute(
@@ -292,13 +297,16 @@ def show_artist_dashboard(art_id):
                     JOIN Genre ON Project.GenreID = Genre.GenreID
                     WHERE Project.ArtID = ?
                     """,
-                    (art_id,)
+                    (art_id,),
                 )
                 songs = cursor.fetchall()
+                print("Songs fetched:", songs)  # Debugging: Print all songs
+
                 for song_title, duration, rating, plays, genre in songs:
                     mins, secs = divmod(duration, 60)
                     song_details = f"Duration: {mins}:{secs:02d}, Rating: {rating}, Plays: {plays}"
                     details_tree.insert("", "end", text=song_title, values=(song_details, genre))
+
             elif category == "videos":
                 # Fetch videos
                 cursor.execute(
@@ -309,17 +317,21 @@ def show_artist_dashboard(art_id):
                     JOIN Genre ON Project.GenreID = Genre.GenreID
                     WHERE Project.ArtID = ?
                     """,
-                    (art_id,)
+                    (art_id,),
                 )
                 videos = cursor.fetchall()
+                print("Videos fetched:", videos)  # Debugging: Print videos data
+
                 for video_title, rating, views, genre in videos:
                     video_details = f"Rating: {rating}, Views: {views}"
                     details_tree.insert("", "end", text=video_title, values=(video_details, genre))
 
         except sqlite3.Error as e:
-            messagebox.showerror("Error", f"Database error: {e}")
+            messagebox.showerror(title="Error", message=f"Database error: {e}")
         finally:
             conn.close()
+
+
 
     def on_sidebar_select(event):
         selected_item = sidebar.focus()
@@ -330,11 +342,7 @@ def show_artist_dashboard(art_id):
 
 
 
-    # Back Button
-    back_button = tk.Button(
-        root, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised", command=show_main_screen
-    )
-    back_button.pack(pady=10)
+
 
 
 def show_top_5_screen():
@@ -342,18 +350,18 @@ def show_top_5_screen():
     clear(root)
 
     # Title Label
-    title_label = tk.Label(root, text="Top 5 by Genre", font=("Helvetica", 16, "bold"), fg="blue")
+    title_label = ctk.CTkLabel(root, text="Top 5 by Genre", font=ctk.CTkFont(size=20, weight="bold"))
     title_label.pack(pady=20)
 
     # Genre Selection Frame
-    genre_frame = tk.Frame(root)
+    genre_frame = ctk.CTkFrame(root)
     genre_frame.pack(pady=10)
 
-    genre_label = tk.Label(genre_frame, text="Select Genre:", font=("Helvetica", 12))
+    genre_label = ctk.CTkLabel(genre_frame, text="Select Genre:", font=ctk.CTkFont(size=14))
     genre_label.grid(row=0, column=0, padx=10, pady=5)
 
-    genre_var = tk.StringVar()
-    genre_combobox = ttk.Combobox(genre_frame, textvariable=genre_var, state="readonly", font=("Helvetica", 12))
+    genre_var = ctk.StringVar()
+    genre_combobox = ctk.CTkComboBox(genre_frame, variable=genre_var, font=ctk.CTkFont(size=14))
     genre_combobox.grid(row=0, column=1, padx=10, pady=5)
 
     # Load genres from the database
@@ -362,18 +370,18 @@ def show_top_5_screen():
         cursor = conn.cursor()
         cursor.execute("SELECT Name FROM Genre")
         genres = [row[0] for row in cursor.fetchall()]
-        genre_combobox['values'] = genres
+        genre_combobox.configure(values=genres)
     except sqlite3.Error as e:
-        messagebox.showerror("Error", f"Database error: {e}")
+        messagebox.showerror(title="Error", message=f"Database error: {e}")
     finally:
         conn.close()
 
     # Content Frame for Treeviews
-    content_frame = tk.Frame(root)
+    content_frame = ctk.CTkFrame(root)
     content_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
     # Sidebar for Categories
-    sidebar = ttk.Treeview(content_frame, columns=("Count"), show="tree", height=20)
+    sidebar = ttk.Treeview(content_frame, columns=("Count"), show="tree")
     sidebar.column("#0", width=200, anchor="w")
     sidebar.heading("#0", text="Categories")
     sidebar.column("Count", width=50, anchor="center")
@@ -381,7 +389,7 @@ def show_top_5_screen():
     sidebar.grid(row=0, column=0, sticky="ns", padx=10, pady=10)
 
     # Details Treeview
-    details_tree = ttk.Treeview(content_frame, columns=("Details"), show="tree", height=20)
+    details_tree = ttk.Treeview(content_frame, columns=("Details"), show="tree")
     details_tree.column("#0", width=300, anchor="w")
     details_tree.heading("#0", text="Items")
     details_tree.column("Details", width=400, anchor="w")
@@ -401,7 +409,7 @@ def show_top_5_screen():
         """Fetch and display the top 5 albums, songs, and videos for the selected genre."""
         genre = genre_var.get()
         if not genre:
-            messagebox.showerror("Error", "Please select a genre.")
+            messagebox.showerror(title="Error", message="Please select a genre.")
             return
 
         # Clear existing data
@@ -418,7 +426,7 @@ def show_top_5_screen():
             cursor.execute("SELECT GenreID FROM Genre WHERE Name = ?", (genre,))
             genre_id = cursor.fetchone()
             if not genre_id:
-                messagebox.showerror("Error", "Genre not found.")
+                messagebox.showerror(title="Error", message="Genre not found.")
                 return
 
             genre_id = genre_id[0]
@@ -433,7 +441,7 @@ def show_top_5_screen():
                 ORDER BY Album.Rating DESC
                 LIMIT 5
                 """,
-                (genre_id,)
+                (genre_id,),
             )
             albums = cursor.fetchall()
 
@@ -447,7 +455,7 @@ def show_top_5_screen():
                 ORDER BY Song.Rating DESC, Song.Plays DESC
                 LIMIT 5
                 """,
-                (genre_id,)
+                (genre_id,),
             )
             songs = cursor.fetchall()
 
@@ -461,7 +469,7 @@ def show_top_5_screen():
                 ORDER BY Video.Rating DESC, Video.Views DESC
                 LIMIT 5
                 """,
-                (genre_id,)
+                (genre_id,),
             )
             videos = cursor.fetchall()
 
@@ -497,29 +505,27 @@ def show_top_5_screen():
             sidebar.bind("<<TreeviewSelect>>", on_sidebar_select)
 
         except sqlite3.Error as e:
-            messagebox.showerror("Error", f"Database error: {e}")
+            messagebox.showerror(title="Error", message=f"Database error: {e}")
         finally:
             conn.close()
 
     # Show Button
-        # Show Button
-    show_button = tk.Button(
-        genre_frame, text="Show Top 5", font=("Helvetica", 12), bg="lightgreen", relief="raised", command=show_top_5
-    )
+    show_button = ctk.CTkButton(genre_frame, text="Show Top 5", command=show_top_5)
     show_button.grid(row=0, column=2, padx=10, pady=5)
 
     # Back Button
-    back_button = tk.Button(
-        genre_frame, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised", command=show_main_screen
-    )
+    back_button = ctk.CTkButton(genre_frame, text="Back", fg_color="#FF6F61", command=show_main_screen)
     back_button.grid(row=0, column=3, padx=10, pady=5)
 
-def show_artist_search():
+
+
+
+def quick_search_for_artist():
     def search_artist():
         artist_nickname = search_entry.get().strip()
 
         if not artist_nickname:
-            tk.messagebox.showerror("Error", "Please enter an artist nickname.")
+            messagebox.showerror(title="Error", message="Please enter an artist nickname.")
             return
 
         try:
@@ -583,7 +589,7 @@ def show_artist_search():
             artist_data = cursor.fetchone()
 
             if not artist_data:
-                tk.messagebox.showerror("Error", "Artist not found.")
+                messagebox.showerror(title="Error", message="Artist not found.")
                 return
 
             art_id, artist_name, song, song_plays, video, video_views, album, album_sales = artist_data
@@ -602,53 +608,53 @@ def show_artist_search():
             conn.close()
 
         # Clear the current window
-        for widget in root.winfo_children():
-            widget.destroy()
+        clear(root)
 
         # Display artist data
-        artist_label = tk.Label(root, text=f"Artist: {artist_name}", font=("Helvetica", 16, "bold"))
+        artist_label = ctk.CTkLabel(root, text=f"Artist: {artist_name}", font=ctk.CTkFont(size=16, weight="bold"))
         artist_label.pack(pady=10)
 
         if song:
-            song_label = tk.Label(root, text=f"Most Successful Song: {song} ({song_plays} plays)", font=("Helvetica", 12))
+            song_label = ctk.CTkLabel(root, text=f"Most Successful Song: {song} ({song_plays} plays)")
             song_label.pack(pady=5)
         
         if video:
-            video_label = tk.Label(root, text=f"Most Successful Video: {video} ({video_views} views)", font=("Helvetica", 12))
+            video_label = ctk.CTkLabel(root, text=f"Most Successful Video: {video} ({video_views} views)")
             video_label.pack(pady=5)
 
         if album:
-            album_label = tk.Label(root, text=f"Most Successful Album: {album} ({album_sales} sales)", font=("Helvetica", 12))
+            album_label = ctk.CTkLabel(root, text=f"Most Successful Album: {album} ({album_sales} sales)")
             album_label.pack(pady=5)
 
         # Display individuals linked to the artist
-        individuals_label = tk.Label(root, text="Associated Individuals:", font=("Helvetica", 14, "bold"))
+        individuals_label = ctk.CTkLabel(root, text="Associated Individuals:", font=ctk.CTkFont(size=14, weight="bold"))
         individuals_label.pack(pady=10)
 
         for first_name, last_name, email, phone in individuals:
             individual_info = f"{first_name} {last_name} | Email: {email} | Phone: {phone}"
-            individual_label = tk.Label(root, text=individual_info, font=("Helvetica", 12))
+            individual_label = ctk.CTkLabel(root, text=individual_info)
             individual_label.pack(pady=2)
 
-        # Back and Exit buttons
-        back_button = tk.Button(root, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised", command=show_artist_search)
-        back_button.pack(side="middle", padx=20, pady=20)
+        # Back button
+        back_button = ctk.CTkButton(root, text="Back", fg_color="#FF6F61", command=quick_search_for_artist)
+        back_button.pack(pady=20)
 
     # Search bar UI
-    for widget in root.winfo_children():
-        widget.destroy()
+    clear(root)
 
-    search_label = tk.Label(root, text="Search Artist", font=("Helvetica", 16, "bold"))
+    search_label = ctk.CTkLabel(root, text="Search Artist", font=ctk.CTkFont(size=16, weight="bold"))
     search_label.pack(pady=20)
 
-    search_entry = tk.Entry(root, font=("Helvetica", 12), width=30)
+    search_entry = ctk.CTkEntry(root, placeholder_text="Enter artist nickname")
     search_entry.pack(pady=10)
 
-    search_button = tk.Button(root, text="Search", font=("Helvetica", 12), bg="lightcoral", relief="raised", command=search_artist)
+    search_button = ctk.CTkButton(root, text="Search", command=search_artist)
     search_button.pack(pady=10)
 
-    back_button = tk.Button(root, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised", command=show_main_screen)
-    back_button.pack(side="middle", padx=20, pady=20)
+    back_button = ctk.CTkButton(root, text="Back", fg_color="#FF6F61", command=show_main_screen)
+    back_button.pack(pady=20)
+
+
 
 
 
@@ -658,22 +664,18 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Error: No UserID provided.")
         sys.exit(1)
-
     try:
         user_id = int(sys.argv[1])
     except ValueError:
         print("Error: Invalid UserID provided.")
         sys.exit(1)
 
-    root = tk.Tk()
+    # Initialize CustomTkinter root
+    root = ctk.CTk()
+    root.configure(fg_color="#E3F2FD")
     root.title("User Dashboard")
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
     root.geometry(f"{screen_width}x{screen_height}")
     show_main_screen()
     root.mainloop()
-
-
-    
-
-

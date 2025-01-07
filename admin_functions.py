@@ -1,9 +1,11 @@
 import sqlite3
+import customtkinter as ctk
 import tkinter as tk
 from tkinter import ttk,messagebox
-from admin import create_admin_window
+from admin import create_admin_main_menu
 
 def clear(root):
+    """Used to clear any widgets from the root,when transitioning from one scene to another"""
     for widget in root.winfo_children():
         widget.destroy()
 
@@ -14,16 +16,17 @@ def connect_db():
     return conn
 
 # Back button
-def go_back(root,create_admin_window):
-    root.destroy()
-    create_admin_window()
+def go_back(root, create_admin_main_menu):
+    """Return to the main admin window."""
+    clear(root)  #Clear all widgets from the current window
+    create_admin_main_menu(root)  #Reload the admin main menu
+
 
 def fetch_top_active_artists():
-    """Retrieve the top 5 active artists based on the number of releases."""
+    """Shows the top 5 artists with the most releases(It counts every release,with no datetime filtering)/In a different version,would like to have added datetime search query"""
     try:
         conn = connect_db()
         cursor = conn.cursor()
-
         query = """
         SELECT 
             Artist.Nickname AS artist_name,
@@ -41,7 +44,7 @@ def fetch_top_active_artists():
         cursor.execute(query)
         results = cursor.fetchall()
         return results
-
+    #Error handling
     except sqlite3.Error as e:
         messagebox.showerror("Error", f"Failed to retrieve data: {e}")
         return []
@@ -49,10 +52,20 @@ def fetch_top_active_artists():
         conn.close()
 
 def fetch_top_profitable_artists():
-    """Retrieve the top 5 profitable artists."""
+    """Retrieve the top 5 profitable artists from sales of album(It counts every album,with no datetime filtering)
+        /In a different version,would like to have added datetime search query"""
     try:
         conn = connect_db()
         cursor = conn.cursor()
+
+        """COALESCE used to turn NULL values to 0 so sum can be done (arithmetic values cant be added with NULL)
+        Could have also done differently with 2 different queries
+        1 that inner joins CD
+        1 that inner joins Vinyl
+        then add their respective results
+        Instead of COALSCSE we could have used IFNULL (shown afterwards in different fetch query)""" 
+
+
         query = """
         SELECT 
             Artist.Nickname AS artist_name,
@@ -78,6 +91,7 @@ def fetch_top_profitable_artists():
         cursor.execute(query)
         results = cursor.fetchall()
         return results
+    #Error handler
     except sqlite3.Error as e:
         messagebox.showerror("Error", f"Failed to retrieve data: {e}")
         return []
@@ -85,7 +99,7 @@ def fetch_top_profitable_artists():
         conn.close()
 
 def fetch_artist_profit(artist_name):
-    """Retrieve the total profit for a specific artist."""
+    """Retrieve the total profit for a specific artist.Same logic as above fetch"""
     try:
         conn = connect_db()
         cursor = conn.cursor()
@@ -113,6 +127,7 @@ def fetch_artist_profit(artist_name):
         cursor.execute(query, (artist_name,))
         result = cursor.fetchone()
         return result
+    #Error handler
     except sqlite3.Error as e:
         messagebox.showerror("Error", f"Failed to retrieve data: {e}")
         return None
@@ -124,7 +139,7 @@ def fetch_best_selling_format():
         conn = connect_db()
         cursor = conn.cursor()
 
-        # Execute the query to find the best-selling format
+        """Checks which format (CD or Vinyl) is most profitable in general from all albums of all artists.(No datetime filtering unfortunately)"""
         query = """
         SELECT 
             Format.Description AS format_type,
@@ -152,13 +167,14 @@ def fetch_best_selling_format():
 
 
 def fetch_table_names():
-    """Retrieve the names of all tables in the database."""
+    """Retrieve the names of all tables in the database.Used for View function"""
     try:
         conn = connect_db()
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
         tables = [row[0] for row in cursor.fetchall()]
         return tables
+    #Error handler
     except sqlite3.Error as e:
         messagebox.showerror("Error", f"Failed to load table names: {e}")
         return []
@@ -166,13 +182,13 @@ def fetch_table_names():
         conn.close()
 
 def fetch_instruments():
-    """Retrieve a list of available instruments."""
+    """Retrieve a list of available instruments from Instrument table.Used when inserting an Individual."""
     try:
         conn = connect_db()
         cursor = conn.cursor()
         cursor.execute("SELECT InstID, Name FROM Instrument")
         results = cursor.fetchall()
-        # Ensure instruments are formatted as "InstID: Name"
+        # Ensure instruments are formatted as "InstID: Name dictionary"
         return [f"{inst_id}: {name}" for inst_id, name in results]
     except sqlite3.Error as e:
         messagebox.showerror("Error", f"Failed to fetch instruments: {e}")
@@ -182,13 +198,12 @@ def fetch_instruments():
 
 def fetch_genres():
     """
-    Retrieve all genres from the Genre table.
-    :return: A list of genres as strings.
+    Retrieve all genres from the Genre table in a list.
     """
     try:
         conn = connect_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT Name FROM Genre")  # Assuming the column holding genre names is 'GenreName'
+        cursor.execute("SELECT Name FROM Genre")
         genres = [row[0] for row in cursor.fetchall()]
         return genres
     except sqlite3.Error as e:
@@ -197,18 +212,20 @@ def fetch_genres():
         conn.close()
 
 #--------PROFIT
-def show_profit_screen(root,create_admin_window):
+def show_profit_screen(root, create_admin_main_menu):
     """Display the profit analysis screen."""
+
+    #Clearing previous widgets
     clear(root)
 
     # Title label
-    profit_label = tk.Label(root, text="Profit Analysis", font=("Helvetica", 16, "bold"), fg="blue")
+    profit_label = ctk.CTkLabel(root, text="Profit Analysis", font=ctk.CTkFont(size=20, weight="bold"))
     profit_label.pack(pady=20)
 
     # Search bar
-    search_label = tk.Label(root, text="Search for Artist's Total Profit", font=("Helvetica", 12))
+    search_label = ctk.CTkLabel(root, text="Search for Artist's Total Profit", font=ctk.CTkFont(size=14))
     search_label.pack(pady=10)
-    search_entry = tk.Entry(root, font=("Helvetica", 12))
+    search_entry = ctk.CTkEntry(root, font=ctk.CTkFont(size=14))
     search_entry.pack(pady=10)
 
     def search_artist_profit():
@@ -218,8 +235,9 @@ def show_profit_screen(root,create_admin_window):
             messagebox.showerror("Error", "Please enter an artist's name.")
             return
 
-        # Use the function from admin_functions
+        # Using the above fetch_profit function
         result = fetch_artist_profit(artist_name)
+
         if result:
             total_profit = result[1]
             messagebox.showinfo(
@@ -227,9 +245,9 @@ def show_profit_screen(root,create_admin_window):
                 f"Total profit for {artist_name} is ${total_profit:.2f}."
             )
         else:
-            messagebox.showinfo("Artist's Total Profit", f"No profit data found for {artist_name}.")
+            messagebox.showerror("Artist's Total Profit", f"No profit data found for {artist_name}.Artist doesn't exist in the database.")
 
-    search_button = tk.Button(root,text="Search",font=("Helvetica", 12),bg="lightblue",relief="raised",command=search_artist_profit)
+    search_button = ctk.CTkButton(root, text="Search", fg_color="#1E90FF", text_color="black", command=search_artist_profit)
     search_button.pack(pady=10)
 
     # Display Top 5 Profitable Artists
@@ -237,7 +255,8 @@ def show_profit_screen(root,create_admin_window):
         """Display the top 5 profitable artists based on total profits."""
         results = fetch_top_profitable_artists()
         if results:
-            artist_list = "\n".join([f"{i+1}. {artist} - ${profits:.2f}" for i, (artist, profits) in enumerate(results)])
+            #Creates a list of formatted strings that contains the Artist Nickname and the profilts from his Albums
+            artist_list = "\n".join([f"{i+1}. {artist} - {profits:.2f} $" for i, (artist, profits) in enumerate(results)])
             messagebox.showinfo(
                 "Top 5 Profitable Artists",
                 f"The top 5 profitable artists are:\n\n{artist_list}"
@@ -245,20 +264,20 @@ def show_profit_screen(root,create_admin_window):
         else:
             messagebox.showinfo("Top 5 Profitable Artists", "No profit data available.")
 
-    top_profitable_button = tk.Button(root,text="Top 5 Profitable Artists",font=("Helvetica", 12),bg="lightgreen",relief="raised",command=show_top_profitable_artists)
+    top_profitable_button = ctk.CTkButton(root, text="Top 5 Profitable Artists", fg_color="lightgreen", text_color="black", command=show_top_profitable_artists)
     top_profitable_button.pack(pady=20)
 
-
-    back_button = tk.Button(root,text="Back",font=("Helvetica", 12),bg="lightcoral",relief="raised",command=lambda: go_back(root, create_admin_window))
+    # Back button
+    back_button = ctk.CTkButton(root, text="Back", fg_color="#FF6F61", text_color="black", command=lambda: go_back(root, create_admin_main_menu))
     back_button.pack(pady=10)
 
-#------------------------
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #BEST SELLING FORMAT
-#------------------------
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 def show_best_selling_format():
-    """Display the best-selling format based on total sales."""
+    """Display the best-selling format based on total sales from all Albums from all Artists."""
     result=fetch_best_selling_format()
     if result:
         format_type, total_sales = result
@@ -270,9 +289,9 @@ def show_best_selling_format():
         messagebox.showinfo("Best-Selling Format", "No sales data available.")
 
 
-#------------------------
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #TOP 5 ACTIVE ARTISTS
-#------------------------
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 def show_top_active_artists():
@@ -288,15 +307,16 @@ def show_top_active_artists():
         messagebox.showinfo("Top 5 Active Artists", "No artist release data available.")
 
 
-#------------------------
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #VIEW FUNCTION
-#------------------------
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def show_view_screen(root, create_admin_window):
+def show_view_screen(root, create_admin_main_menu):
+    """Display the screen to view table contents."""
     clear(root)
 
     # Title label
-    view_label = tk.Label(root, text="View Table Contents", font=("Helvetica", 16, "bold"), fg="blue")
+    view_label = ctk.CTkLabel(root, text="View Table Contents", font=ctk.CTkFont(size=20, weight="bold"))
     view_label.pack(pady=20)
 
     # Dropdown to select the table
@@ -304,22 +324,28 @@ def show_view_screen(root, create_admin_window):
     table_dropdown = ttk.Combobox(root, textvariable=table_var, state="readonly", font=("Helvetica", 12))
     table_dropdown.pack(pady=10)
 
-    # Frame for treeview (data display)
-    tree_frame = tk.Frame(root)
+    # Frame for Treeview (data display)
+    tree_frame = ctk.CTkFrame(root)
     tree_frame.pack(fill="both", expand=True, pady=10)
 
+    # Treeview widget for data
     data_tree = ttk.Treeview(tree_frame, show="headings")
     data_tree.pack(fill="both", expand=True)
 
+    # Scrollbar for Treeview
+    scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=data_tree.yview)
+    scrollbar.pack(side="right", fill="y")
+    data_tree.configure(yscroll=scrollbar.set)
+
     # Frame for Back button
-    button_frame = tk.Frame(root)
+    button_frame = ctk.CTkFrame(root)
     button_frame.pack(fill="x", pady=10)
 
-    back_button = tk.Button(button_frame, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised",
-                            command=lambda: go_back(root, create_admin_window))
+    back_button = ctk.CTkButton(button_frame, text="Back", fg_color="#FF6F61", command=lambda: go_back(root, create_admin_main_menu))
     back_button.pack(pady=10)
 
     def load_table_names():
+        """Load all table names of the music label database into the dropdown."""
         try:
             conn = connect_db()
             cursor = conn.cursor()
@@ -327,13 +353,15 @@ def show_view_screen(root, create_admin_window):
             tables = [row[0] for row in cursor.fetchall()]
             table_dropdown['values'] = tables
             if tables:
-                table_var.set(tables[0])  # Set default table
+                table_var.set(tables[0])  # Setting a default value on the combobox
+                load_table_data()  # Automatically load data for the first table
         except sqlite3.Error as e:
             messagebox.showerror("Error", f"Failed to load table names: {e}")
         finally:
             conn.close()
 
-    def load_table_data():
+    def load_table_data(event=None):
+        """Load data from the selected table of the combobox into the Treeview Frame."""
         table_name = table_var.get()
         if not table_name:
             return
@@ -342,17 +370,30 @@ def show_view_screen(root, create_admin_window):
             conn = connect_db()
             cursor = conn.cursor()
 
-            # Default behavior for all tables
+            # Fetch column names and data from selected table,extracting them into a list
             cursor.execute(f"PRAGMA table_info({table_name})")
             columns = [col[1] for col in cursor.fetchall()]
-            data_tree["columns"] = columns
-            data_tree.delete(*data_tree.get_children())  # Clear existing rows
+            if not columns:
+                messagebox.showerror("Error", f"No columns found in the table '{table_name}'.")
+                return
 
+            # Configure Treeview columns
+            data_tree["columns"] = columns
+            data_tree.delete(*data_tree.get_children())  # Clear existing rows in the Treeview
+
+            #Centering each column
             for col in columns:
                 data_tree.heading(col, text=col)
+                data_tree.column(col, anchor="center", width=150)
 
+            # Fetch table data
             cursor.execute(f"SELECT * FROM {table_name}")
-            for row in cursor.fetchall():
+            rows = cursor.fetchall()
+            if not rows:
+                messagebox.showinfo("Info", f"No data found in the table '{table_name}'.")
+                return
+
+            for row in rows:
                 data_tree.insert("", "end", values=row)
 
         except sqlite3.Error as e:
@@ -360,40 +401,41 @@ def show_view_screen(root, create_admin_window):
         finally:
             conn.close()
 
-    table_dropdown.bind("<<ComboboxSelected>>", lambda event: load_table_data())
+    #Bind the table dropdown selection event
+    table_dropdown.bind("<<ComboboxSelected>>", load_table_data)
+
+    #Load table names initially
     load_table_names()
 
 
-    back_button = tk.Button(root, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised", command=lambda: go_back(root, create_admin_window))
-    back_button.pack(pady=15)
 
 
-#---------------------------------
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #INSERT SCREEN WITH COMBOBOX
-#---------------------------------
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-def show_insert_screen(root,create_admin_window):
-    """Display the insert screen with combobox and options."""
+def show_insert_screen(root, create_admin_main_menu):
+    """Display the insert screen main window with combobox values Individual,Project and Partner."""
     clear(root)
 
     # Title label
-    insert_label = tk.Label(root, text="Insert Data", font=("Helvetica", 16, "bold"), fg="blue")
+    insert_label = ctk.CTkLabel(root, text="Insert Data", font=ctk.CTkFont(size=20, weight="bold"))
     insert_label.pack(pady=20)
 
     # Combobox for selecting the table
-    table_label = tk.Label(root, text="Select Table:", font=("Helvetica", 12))
+    table_label = ctk.CTkLabel(root, text="Select Table:", font=ctk.CTkFont(size=14))
     table_label.pack(pady=10)
-    table_var = tk.StringVar()
-    table_combobox = ttk.Combobox(root, textvariable=table_var, state="readonly", font=("Helvetica", 12))
-    table_combobox['values'] = ["Individual", "Project", "Partner"]
+
+    table_var = ctk.StringVar()
+    table_combobox = ctk.CTkComboBox(root, variable=table_var, values=["Individual", "Project", "Partner"], font=ctk.CTkFont(size=14))
     table_combobox.pack(pady=10)
 
     # Function to handle Insert based on selection
     def handle_insert():
         selected_table = table_var.get()
         if not selected_table:
-            messagebox.showerror("Error", "Please select a table to insert data into.")
+            ctk.CTkMessagebox(title="Error", message="Please select a table to insert data into.", icon="error")
             return
 
         if selected_table == "Individual":
@@ -403,20 +445,21 @@ def show_insert_screen(root,create_admin_window):
         elif selected_table == "Partner":
             show_partner_insert_form(root)
         else:
-            messagebox.showerror("Error", "Invalid selection.")
+            ctk.CTkMessagebox(title="Error", message="Invalid selection.", icon="error")
 
-    # Insert button
-    insert_button = tk.Button(root,text="Insert",font=("Helvetica", 12),bg="lightgreen",relief="raised",command=handle_insert)
+    #Insert button
+    insert_button = ctk.CTkButton(root, text="Insert", command=handle_insert, fg_color="green")
     insert_button.pack(pady=20)
 
-
-    back_button = tk.Button(root,text="Back",font=("Helvetica", 12),bg="lightcoral",relief="raised",command=lambda: go_back(root, create_admin_window))
+    #Back button
+    back_button = ctk.CTkButton(root, text="Back", command=lambda: go_back(root, create_admin_main_menu), fg_color="#FF6F61")
     back_button.pack(pady=10)
 
 
-#------------------------
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #INSERT INDIVIDUAL
-#------------------------
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 def show_individual_insert_form(root):
@@ -424,11 +467,11 @@ def show_individual_insert_form(root):
     clear(root)
 
     # Title label
-    title_label = tk.Label(root, text="Insert New Individual", font=("Helvetica", 16, "bold"), fg="blue")
+    title_label = ctk.CTkLabel(root, text="Insert New Individual", font=ctk.CTkFont(size=20, weight="bold"))
     title_label.pack(pady=20)
 
     # Main form frame
-    form_frame = tk.Frame(root)
+    form_frame = ctk.CTkFrame(root)
     form_frame.pack(pady=10)
 
     # Form fields
@@ -437,83 +480,76 @@ def show_individual_insert_form(root):
 
     # Create a grid layout for the fields
     for row, field in enumerate(fields):
-        label = tk.Label(form_frame, text=f"{field}:", font=("Helvetica", 12))
+        label = ctk.CTkLabel(form_frame, text=f"{field}:", font=ctk.CTkFont(size=14))
         label.grid(row=row, column=0, sticky="w", padx=10, pady=5)
-        entry = tk.Entry(form_frame, font=("Helvetica", 12), show="*" if field == "Password" else "")
+        entry = ctk.CTkEntry(form_frame, font=ctk.CTkFont(size=14))
+        if field == "Password":
+            entry.configure(show="*")
         entry.grid(row=row, column=1, padx=10, pady=5)
         entries[field] = entry
 
     # Instrument association
-    instrument_label = tk.Label(root, text="Associate Instruments (optional):", font=("Helvetica", 12))
+    instrument_label = ctk.CTkLabel(root, text="Associate Instruments (optional):", font=ctk.CTkFont(size=14))
     instrument_label.pack(pady=10)
-    instrument_frame = tk.Frame(root)
+    instrument_frame = ctk.CTkFrame(root)
     instrument_frame.pack(pady=10)
 
-    # Combobox to select instruments
-    instrument_var = tk.StringVar()
-    instrument_combobox = ttk.Combobox(instrument_frame, textvariable=instrument_var, state="readonly", font=("Helvetica", 12))
+    instrument_var = ctk.StringVar()
+    instrument_combobox = ctk.CTkComboBox(instrument_frame, variable=instrument_var, font=ctk.CTkFont(size=14))
     instrument_combobox.grid(row=0, column=0, padx=5)
 
-    # Load instrument names from the database
     try:
         instruments = fetch_instruments()
-        instrument_combobox['values'] = instruments
+        instrument_combobox.configure(values=instruments)
     except Exception as e:
-        messagebox.showerror("Error", f"Failed to load instruments: {e}")
+        ctk.CTkMessagebox(title="Error", message=f"Failed to load instruments: {e}")
 
-    # Add selected instrument
     selected_instruments = []
 
     def add_instrument():
         instrument = instrument_var.get()
         if not instrument:
-            messagebox.showerror("Error", "Please select an instrument.")
+            ctk.CTkMessagebox(title="Error", message="Please select an instrument.")
             return
 
-        # Ensure the instrument follows the "InstID: Name" format
         if ":" not in instrument:
-            messagebox.showerror("Error", "Invalid instrument format.")
+            ctk.CTkMessagebox(title="Error", message="Invalid instrument format.")
             return
 
         if instrument not in selected_instruments:
             selected_instruments.append(instrument)
-            instrument_listbox.insert(tk.END, instrument)
+            instrument_listbox.insert("end", instrument)
 
-
-    add_button = tk.Button(instrument_frame, text="Add", font=("Helvetica", 10), command=add_instrument)
+    add_button = ctk.CTkButton(instrument_frame, text="Add", command=add_instrument, fg_color="green")
     add_button.grid(row=0, column=1, padx=5)
 
-    # Listbox to show selected instruments
     instrument_listbox = tk.Listbox(root, font=("Helvetica", 12), height=5)
     instrument_listbox.pack(pady=10)
 
-    # Remove selected instrument
     def remove_instrument():
         selected = instrument_listbox.curselection()
         if selected:
             selected_instruments.remove(instrument_listbox.get(selected[0]))
             instrument_listbox.delete(selected)
 
-    remove_button = tk.Button(root, text="Remove Selected", font=("Helvetica", 10), command=remove_instrument)
+    remove_button = ctk.CTkButton(root, text="Remove Selected", command=remove_instrument, fg_color="red")
     remove_button.pack(pady=5)
 
     # Artist association options
-    association_var = tk.StringVar(value="No")
-
-    association_label = tk.Label(root, text="Associated with another artist?", font=("Helvetica", 12))
+    association_var = ctk.StringVar(value="No")
+    association_label = ctk.CTkLabel(root, text="Associated with another artist?", font=ctk.CTkFont(size=14))
     association_label.pack(pady=10)
 
-    association_frame = tk.Frame(root)
+    association_frame = ctk.CTkFrame(root)
     association_frame.pack(pady=5)
 
-    association_yes = tk.Radiobutton(association_frame, text="Yes", variable=association_var, value="Yes", font=("Helvetica", 12))
+    association_yes = ctk.CTkRadioButton(association_frame, text="Yes", variable=association_var, value="Yes")
     association_yes.grid(row=0, column=0, padx=10)
 
-    association_no = tk.Radiobutton(association_frame, text="No", variable=association_var, value="No", font=("Helvetica", 12))
+    association_no = ctk.CTkRadioButton(association_frame, text="No", variable=association_var, value="No")
     association_no.grid(row=0, column=1, padx=10)
 
-    # Artist Details
-    artist_frame = tk.Frame(root)
+    artist_frame = ctk.CTkFrame(root)
     artist_frame.pack(pady=10)
 
     def update_artist_fields(*args):
@@ -521,21 +557,21 @@ def show_individual_insert_form(root):
             widget.destroy()
 
         if association_var.get() == "Yes":
-            artist_nickname_label = tk.Label(artist_frame, text="Artist Nickname:", font=("Helvetica", 12))
+            artist_nickname_label = ctk.CTkLabel(artist_frame, text="Artist Nickname:", font=ctk.CTkFont(size=14))
             artist_nickname_label.pack(pady=5)
-            artist_nickname_entry = tk.Entry(artist_frame, font=("Helvetica", 12))
+            artist_nickname_entry = ctk.CTkEntry(artist_frame, font=ctk.CTkFont(size=14))
             artist_nickname_entry.pack(pady=5)
             entries["Artist Nickname"] = artist_nickname_entry
         else:
-            nickname_label = tk.Label(artist_frame, text="New Artist Nickname:", font=("Helvetica", 12))
+            nickname_label = ctk.CTkLabel(artist_frame, text="New Artist Nickname:", font=ctk.CTkFont(size=14))
             nickname_label.pack(pady=5)
-            nickname_entry = tk.Entry(artist_frame, font=("Helvetica", 12))
+            nickname_entry = ctk.CTkEntry(artist_frame, font=ctk.CTkFont(size=14))
             nickname_entry.pack(pady=5)
             entries["New Artist Nickname"] = nickname_entry
 
-            country_base_label = tk.Label(artist_frame, text="Country Base:", font=("Helvetica", 12))
+            country_base_label = ctk.CTkLabel(artist_frame, text="Country Base:", font=ctk.CTkFont(size=14))
             country_base_label.pack(pady=5)
-            country_base_entry = tk.Entry(artist_frame, font=("Helvetica", 12))
+            country_base_entry = ctk.CTkEntry(artist_frame, font=ctk.CTkFont(size=14))
             country_base_entry.pack(pady=5)
             entries["Country Base"] = country_base_entry
 
@@ -648,24 +684,23 @@ def show_individual_insert_form(root):
 
             conn.commit()
             messagebox.showinfo("Success", "Individual added successfully.")
-            show_insert_screen(root,create_admin_window)
+            show_insert_screen(root,create_admin_main_menu)
 
         except sqlite3.Error as e:
             messagebox.showerror("Error", f"Failed to insert data: {e}")
         finally:
             conn.close()
 
-    save_button = tk.Button(root, text="Save", font=("Helvetica", 12), bg="lightblue", relief="raised", command=save_individual)
+    save_button = ctk.CTkButton(root, text="Save", command=save_individual, fg_color="#26A69A")
     save_button.pack(pady=20)
 
-    # Back button
-    back_button = tk.Button(root, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised", command=lambda:show_insert_screen(root,create_admin_window))
+    back_button = ctk.CTkButton(root, text="Back", command=lambda: show_insert_screen(root, create_admin_main_menu), fg_color="#FF6F61")
     back_button.pack(pady=10)
 
 
-#------------------------
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #INSERT PROJECT
-#------------------------
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 def show_project_insert_form(root):
@@ -673,7 +708,7 @@ def show_project_insert_form(root):
     clear(root)
 
     # Title label
-    title_label = tk.Label(root, text="Insert New Project", font=("Helvetica", 16, "bold"), fg="blue")
+    title_label = ctk.CTkLabel(root, text="Insert New Project", font=ctk.CTkFont(size=20, weight="bold"))
     title_label.pack(pady=20)
 
     # Form fields
@@ -681,153 +716,140 @@ def show_project_insert_form(root):
     entries = {}
 
     for field in fields:
-        label = tk.Label(root, text=f"{field}:", font=("Helvetica", 12))
+        label = ctk.CTkLabel(root, text=f"{field}:", font=ctk.CTkFont(size=14))
         label.pack(pady=5)
-        entry = tk.Entry(root, font=("Helvetica", 12))
+        entry = ctk.CTkEntry(root, font=ctk.CTkFont(size=14))
         entry.pack(pady=5)
         entries[field] = entry
 
     # Combobox for Genre
-    genre_label = tk.Label(root, text="Genre:", font=("Helvetica", 12))
+    genre_label = ctk.CTkLabel(root, text="Genre:", font=ctk.CTkFont(size=14))
     genre_label.pack(pady=5)
-    genre_var = tk.StringVar()
-    genre_combobox = ttk.Combobox(root, textvariable=genre_var, state="readonly", font=("Helvetica", 12))
+    genre_var = ctk.StringVar()
+    genre_combobox = ctk.CTkComboBox(root, variable=genre_var, font=ctk.CTkFont(size=14))
     genre_combobox.pack(pady=5)
 
     # Load genres from database
     try:
         genres = fetch_genres()
-        genre_combobox['values'] = genres
+        genre_combobox.configure(values=genres)
     except Exception as e:
         messagebox.showerror("Error", f"Failed to load genres: {e}")
 
     # Release Date
-    release_date_label = tk.Label(root, text="Release Date (YYYY-MM-DD):", font=("Helvetica", 12))
+    release_date_label = ctk.CTkLabel(root, text="Release Date (YYYY-MM-DD):", font=ctk.CTkFont(size=14))
     release_date_label.pack(pady=5)
-    release_date_entry = tk.Entry(root, font=("Helvetica", 12))
+    release_date_entry = ctk.CTkEntry(root, font=ctk.CTkFont(size=14))
     release_date_entry.pack(pady=5)
 
     # Radiobuttons for project type
-    project_type_var = tk.StringVar(value="Song")
-    project_type_label = tk.Label(root, text="Project Type:", font=("Helvetica", 12))
+    project_type_var = ctk.StringVar(value="Song")
+    project_type_label = ctk.CTkLabel(root, text="Project Type:", font=ctk.CTkFont(size=14))
     project_type_label.pack(pady=10)
+
     project_types = ["Album", "Song", "Video"]
     for project_type in project_types:
-        rb = tk.Radiobutton(root, text=project_type, variable=project_type_var, value=project_type, font=("Helvetica", 12))
+        rb = ctk.CTkRadioButton(root, text=project_type, variable=project_type_var, value=project_type)
         rb.pack(pady=5)
 
     # Dynamic frame for additional fields based on project type
-    dynamic_frame = tk.Frame(root)
+    dynamic_frame = ctk.CTkFrame(root)
     dynamic_frame.pack(pady=10)
 
-    # Define formats and price_entry globally within the function
     formats = {"Vinyl": tk.IntVar(), "CD": tk.IntVar(), "Digital": tk.IntVar()}
-    price_entry = None
+    price_entry_vinyl = None
+    price_entry_cd = None
+    album_assoc_var = tk.StringVar(value="No")  # Added for Song association
 
     def update_dynamic_fields(*args):
-        nonlocal price_entry
+        nonlocal price_entry_vinyl, price_entry_cd
 
+        # Clear existing fields
         for widget in dynamic_frame.winfo_children():
             widget.destroy()
 
         project_type = project_type_var.get()
         if project_type == "Album":
             # Format checkboxes
-            format_label = tk.Label(dynamic_frame, text="Available Formats:", font=("Helvetica", 12))
+            format_label = ctk.CTkLabel(dynamic_frame, text="Available Formats:", font=ctk.CTkFont(size=14))
             format_label.pack(pady=5)
 
             for fmt in formats:
-                cb = tk.Checkbutton(dynamic_frame, text=fmt, variable=formats[fmt], font=("Helvetica", 12))
+                cb = ctk.CTkCheckBox(dynamic_frame, text=fmt, variable=formats[fmt])
                 cb.pack(pady=5)
 
-            # Price entry (conditional)
-            price_label = tk.Label(dynamic_frame, text="Price:", font=("Helvetica", 12))
-            price_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
+            # Price entry for Vinyl and CD
+            price_label_vinyl = ctk.CTkLabel(dynamic_frame, text="Vinyl Price:", font=ctk.CTkFont(size=14))
+            price_entry_vinyl = ctk.CTkEntry(dynamic_frame, font=ctk.CTkFont(size=14))
 
-            def toggle_price(*args):
-                if formats["Vinyl"].get() or formats["CD"].get():
-                    price_label.pack(pady=5)
-                    price_entry.pack(pady=5)
+            price_label_cd = ctk.CTkLabel(dynamic_frame, text="CD Price:", font=ctk.CTkFont(size=14))
+            price_entry_cd = ctk.CTkEntry(dynamic_frame, font=ctk.CTkFont(size=14))
+
+            def toggle_price():
+                # Show or hide price fields based on the selected format
+                if formats["Vinyl"].get():
+                    price_label_vinyl.pack(pady=5)
+                    price_entry_vinyl.pack(pady=5)
                 else:
-                    price_label.pack_forget()
-                    price_entry.pack_forget()
+                    price_label_vinyl.pack_forget()
+                    price_entry_vinyl.pack_forget()
 
-            formats["Vinyl"].trace_add("write", toggle_price)
-            formats["CD"].trace_add("write", toggle_price)
+                if formats["CD"].get():
+                    price_label_cd.pack(pady=5)
+                    price_entry_cd.pack(pady=5)
+                else:
+                    price_label_cd.pack_forget()
+                    price_entry_cd.pack_forget()
 
+            formats["Vinyl"].trace_add("write", lambda *args: toggle_price())
+            formats["CD"].trace_add("write", lambda *args: toggle_price())
             toggle_price()
 
         elif project_type == "Song":
             # Radiobutton for album association
-            album_assoc_var = tk.StringVar(value="No")
-            album_assoc_label = tk.Label(dynamic_frame, text="Belongs to an Album?", font=("Helvetica", 12))
+            album_assoc_label = ctk.CTkLabel(dynamic_frame, text="Belongs to an Album?", font=ctk.CTkFont(size=14))
             album_assoc_label.pack(pady=5)
-            album_assoc_rb_yes = tk.Radiobutton(dynamic_frame, text="Yes", variable=album_assoc_var, value="Yes", font=("Helvetica", 12))
+            album_assoc_rb_yes = ctk.CTkRadioButton(dynamic_frame, text="Yes", variable=album_assoc_var, value="Yes")
             album_assoc_rb_yes.pack(pady=5)
-            album_assoc_rb_no = tk.Radiobutton(dynamic_frame, text="No", variable=album_assoc_var, value="No", font=("Helvetica", 12))
+            album_assoc_rb_no = ctk.CTkRadioButton(dynamic_frame, text="No", variable=album_assoc_var, value="No")
             album_assoc_rb_no.pack(pady=5)
 
-            # Album name entry
-            album_name_frame = tk.Frame(dynamic_frame)
-            album_name_frame.pack(pady=5)
+            # Album name field
+            album_name_label = ctk.CTkLabel(dynamic_frame, text="Album Name:", font=ctk.CTkFont(size=14))
+            album_name_entry = ctk.CTkEntry(dynamic_frame, font=ctk.CTkFont(size=14))
 
-            def update_album_name_fields(*args):
-                for widget in album_name_frame.winfo_children():
-                    widget.destroy()
-
+            def update_album_name(*args):
                 if album_assoc_var.get() == "Yes":
-                    album_name_label = tk.Label(album_name_frame, text="Album Name:", font=("Helvetica", 12))
                     album_name_label.pack(pady=5)
-                    album_name_entry = tk.Entry(album_name_frame, font=("Helvetica", 12))
                     album_name_entry.pack(pady=5)
-                    entries["Album Name"] = album_name_entry
                 else:
-                    entries.pop("Album Name", None)
+                    album_name_label.pack_forget()
+                    album_name_entry.pack_forget()
 
-            album_assoc_var.trace_add("write", update_album_name_fields)
-            update_album_name_fields()
+            album_assoc_var.trace_add("write", lambda *args: update_album_name())
+            update_album_name()
 
-            # Radiobutton for video association
-            video_assoc_var = tk.StringVar(value="No")
-            video_assoc_label = tk.Label(dynamic_frame, text="Is there a Video?", font=("Helvetica", 12))
-            video_assoc_label.pack(pady=5)
-            video_assoc_rb_yes = tk.Radiobutton(dynamic_frame, text="Yes", variable=video_assoc_var, value="Yes", font=("Helvetica", 12))
-            video_assoc_rb_yes.pack(pady=5)
-            video_assoc_rb_no = tk.Radiobutton(dynamic_frame, text="No", variable=video_assoc_var, value="No", font=("Helvetica", 12))
-            video_assoc_rb_no.pack(pady=5)
+            # Song duration field
+            song_duration_label = ctk.CTkLabel(dynamic_frame, text="Song Duration (seconds):", font=ctk.CTkFont(size=14))
+            song_duration_label.pack(pady=5)
+            song_duration_entry = ctk.CTkEntry(dynamic_frame, font=ctk.CTkFont(size=14))
+            song_duration_entry.pack(pady=5)
+            entries["Song Duration"] = song_duration_entry
 
-            # Video attributes if Yes
-            video_attrs_frame = tk.Frame(dynamic_frame)
-            video_attrs_frame.pack(pady=5)
-
-            def update_video_fields(*args):
-                for widget in video_attrs_frame.winfo_children():
-                    widget.destroy()
-
-                if video_assoc_var.get() == "Yes":
-                    video_title_label = tk.Label(video_attrs_frame, text="Video Title:", font=("Helvetica", 12))
-                    video_title_label.pack(pady=5)
-                    video_title_entry = tk.Entry(video_attrs_frame, font=("Helvetica", 12))
-                    video_title_entry.pack(pady=5)
-                    entries["Video Title"] = video_title_entry
-                else:
-                    entries.pop("Video Title", None)
-
-            video_assoc_var.trace_add("write", update_video_fields)
-            update_video_fields()
         elif project_type == "Video":
-            # Song Title Input
-            song_title_label = tk.Label(dynamic_frame, text="Song Title (to associate):", font=("Helvetica", 12))
-            song_title_label.pack(pady=5)
-            song_title_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
-            song_title_entry.pack(pady=5)
-            entries["Song Title"] = song_title_entry
+            # Duration field for Video
+            duration_label = ctk.CTkLabel(dynamic_frame, text="Duration (seconds):", font=ctk.CTkFont(size=14))
+            duration_label.pack(pady=5)
+            duration_entry = ctk.CTkEntry(dynamic_frame, font=ctk.CTkFont(size=14))
+            duration_entry.pack(pady=5)
+            entries["Duration"] = duration_entry
 
     project_type_var.trace_add("write", update_dynamic_fields)
     update_dynamic_fields()
 
+
     def save_project():
-        data = {field: entry.get().strip() for field, entry in entries.items()}
+        data = {field: entry.get().strip() for field, entry in entries.items() if entry.winfo_exists()}
         data["Genre"] = genre_var.get()
         data["Release Date"] = release_date_entry.get().strip()
 
@@ -865,13 +887,24 @@ def show_project_insert_form(root):
             )
             project_id = cursor.lastrowid
 
+            # Insert into Release table
+            cursor.execute(
+                "INSERT INTO Release (ArtID, ProjectID) VALUES (?, ?)",
+                (art_id, project_id)
+            )
+
             # Handle Song
             if project_type == "Song":
-                cursor.execute("INSERT INTO Song (ProjectID) VALUES (?)", (project_id,))
+                song_duration = entries["Song Duration"].get().strip()
+                if not song_duration.isdigit():
+                    messagebox.showerror("Error", "Song duration must be a valid number.")
+                    return
+
+                cursor.execute("INSERT INTO Song (ProjectID, Duration) VALUES (?, ?)", (project_id, int(song_duration)))
                 song_id = cursor.lastrowid
 
                 # Handle album association
-                if "Album Name" in data:
+                if "Album Name" in entries and "Album Name" in data:
                     cursor.execute(
                         """
                         SELECT Album.AlbID
@@ -888,15 +921,6 @@ def show_project_insert_form(root):
                     album_id = album[0]
                     cursor.execute("INSERT INTO Is_part_of (SongID, AlbID) VALUES (?, ?)", (song_id, album_id))
 
-                # Handle video association
-                if "Video Title" in data:
-                    cursor.execute(
-                        "INSERT INTO Project (ArtID, Title, GenreID, Release_Date) VALUES (?, ?, ?, ?)",
-                        (art_id, data["Video Title"], genre_id, data["Release Date"]),
-                    )
-                    video_project_id = cursor.lastrowid
-                    cursor.execute("INSERT INTO Video (ProjectID, SongID) VALUES (?, ?)", (video_project_id, song_id))
-
                 messagebox.showinfo("Success", "Project and Song added successfully.")
 
             # Handle Album
@@ -906,43 +930,31 @@ def show_project_insert_form(root):
 
                 # Insert formats and price
                 if formats["Vinyl"].get():
-                    cursor.execute("INSERT INTO Vinyl (AlbID, FormID, Cost) VALUES (?, ?, ?)", (album_id, 1, price_entry.get()))
+                    vinyl_price = price_entry_vinyl.get().strip()
+                    if not vinyl_price.isdigit():
+                        messagebox.showerror("Error", "Vinyl price must be a valid number.")
+                        return
+                    cursor.execute("INSERT INTO Vinyl (AlbID, FormID, Cost) VALUES (?, ?, ?)", (album_id, 1, float(vinyl_price)))
+
                 if formats["CD"].get():
-                    cursor.execute("INSERT INTO CD (AlbID, FormID, Cost) VALUES (?, ?, ?)", (album_id, 2, price_entry.get()))
+                    cd_price = price_entry_cd.get().strip()
+                    if not cd_price.isdigit():
+                        messagebox.showerror("Error", "CD price must be a valid number.")
+                        return
+                    cursor.execute("INSERT INTO CD (AlbID, FormID, Cost) VALUES (?, ?, ?)", (album_id, 2, float(cd_price)))
+
                 if formats["Digital"].get():
                     cursor.execute("INSERT INTO Digital (AlbID, FormID) VALUES (?, ?)", (album_id, 3))
 
                 messagebox.showinfo("Success", "Project and Album added successfully.")
-            
+
             elif project_type == "Video":
-                video_title = data.get("Title")  # Use the main "Title" as the Video Title
-                song_title = data.get("Song Title")
-                if not song_title:
-                    messagebox.showerror("Error", "Please enter the associated song title.")
+                duration = entries["Duration"].get().strip()
+                if not duration.isdigit():
+                    messagebox.showerror("Error", "Duration must be a valid number.")
                     return
 
-                # Check if the song exists and belongs to the same artist
-                cursor.execute(
-                    """
-                    SELECT Song.SongID
-                    FROM Song
-                    JOIN Project ON Song.ProjectID = Project.ProjectID
-                    WHERE Project.ArtID = ? AND Project.Title = ?
-                    """,
-                    (art_id, song_title),
-                )
-                song = cursor.fetchone()
-                if not song:
-                    messagebox.showerror("Error", f"Song '{song_title}' does not exist or does not belong to this artist.")
-                    return
-                song_id = song[0]
-
-                # Link the video to the song in the Video table
-                cursor.execute(
-                    "INSERT INTO Video (ProjectID, SongID) VALUES (?, ?)",
-                    (project_id, song_id),
-                )
-
+                cursor.execute("INSERT INTO Video (ProjectID, Duration) VALUES (?, ?)", (project_id, int(duration)))
                 messagebox.showinfo("Success", "Project and Video added successfully.")
 
             conn.commit()
@@ -952,21 +964,23 @@ def show_project_insert_form(root):
         finally:
             conn.close()
 
-
-
-    save_button = tk.Button(root, text="Save", font=("Helvetica", 12), bg="lightblue", relief="raised", command=save_project)
+    save_button = ctk.CTkButton(root, text="Save", fg_color="#26A69A", command=save_project)
     save_button.pack(pady=20)
 
-    back_button = tk.Button(root, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised", command=lambda:show_insert_screen(root,create_admin_window))
+    # Back button
+    back_button = ctk.CTkButton(root, text="Back", fg_color="#FF6F61", command=lambda: show_insert_screen(root, create_admin_main_menu))
     back_button.pack(pady=10)
 
-#--------INSERT PARTNER
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#INSERT PARTNER
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 def show_partner_insert_form(root):
     """Form to insert data into the Partner table."""
     clear(root)
 
     # Title label
-    title_label = tk.Label(root, text="Insert Into Partner", font=("Helvetica", 16, "bold"), fg="blue")
+    title_label = ctk.CTkLabel(root, text="Insert Into Partner", font=ctk.CTkFont(size=20, weight="bold"), text_color="blue")
     title_label.pack(pady=20)
 
     # Form fields for Partner
@@ -974,18 +988,18 @@ def show_partner_insert_form(root):
     entries = {}
 
     for idx, field in enumerate(fields):
-        label = tk.Label(root, text=f"{field}:", font=("Helvetica", 12))
+        label = ctk.CTkLabel(root, text=f"{field}:", font=ctk.CTkFont(size=14))
         label.pack(pady=5)
-        entry = tk.Entry(root, font=("Helvetica", 12))
+        entry = ctk.CTkEntry(root, font=ctk.CTkFont(size=14))
         entry.pack(pady=5)
         entries[field] = entry
 
     # Combobox for selecting Role
-    role_var = tk.StringVar()
-    role_label = tk.Label(root, text="Role:", font=("Helvetica", 12))
+    role_var = ctk.StringVar()
+    role_label = ctk.CTkLabel(root, text="Role:", font=ctk.CTkFont(size=14))
     role_label.pack(pady=5)
 
-    role_combobox = ttk.Combobox(root, textvariable=role_var, state="readonly", font=("Helvetica", 12))
+    role_combobox = ctk.CTkComboBox(root, variable=role_var, font=ctk.CTkFont(size=14), state="readonly")
     role_combobox.pack(pady=5)
 
     # Load roles into the combobox
@@ -995,7 +1009,7 @@ def show_partner_insert_form(root):
         cursor.execute("SELECT RoleID, Description FROM Role")  # Adjust table/column names if needed
         roles = cursor.fetchall()
         if roles:
-            role_combobox['values'] = [f"{role[0]}: {role[1]}" for role in roles]  # Format: RoleID: RoleName
+            role_combobox.configure(values=[f"{role[0]}: {role[1]}" for role in roles])  # Format: RoleID: RoleName
         else:
             messagebox.showerror("Error", "No roles found in the database.")
     except sqlite3.Error as e:
@@ -1022,7 +1036,7 @@ def show_partner_insert_form(root):
             cursor.execute(query, (role_id, data["First Name"], data["Last Name"]))
             conn.commit()
             messagebox.showinfo("Success", "Data inserted successfully.")
-            show_insert_screen(root,create_admin_window)
+            show_insert_screen(root, create_admin_main_menu)
         except sqlite3.Error as e:
             messagebox.showerror("Error", f"Failed to insert data: {e}")
         except ValueError:
@@ -1030,34 +1044,37 @@ def show_partner_insert_form(root):
         finally:
             conn.close()
 
-    save_button = tk.Button(root, text="Save", font=("Helvetica", 12), bg="lightblue", relief="raised", command=save_partner)
+    save_button = ctk.CTkButton(root, text="Save", font=ctk.CTkFont(size=14), fg_color="#26A69A", command=save_partner)
     save_button.pack(pady=20)
 
     # Back button
-    back_button = tk.Button(root, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised", command=lambda:show_insert_screen(root,create_admin_window))
+    back_button = ctk.CTkButton(root, text="Back", font=ctk.CTkFont(size=14), fg_color="#FF6F61", command=lambda: show_insert_screen(root, create_admin_main_menu))
     back_button.pack(pady=10)
 
-#-------------ASSOCIATE FUNCTION
-def show_associate_screen(root, create_admin_window):
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#ASSOCIATE FUNCTION
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+def show_associate_screen(root, create_admin_main_menu):
     """
-    Display the associate screen with combobox options to associate a song with an album or a partner with a project.
+    Display the associate screen with combobox options to associate a song with an album, 
+    a partner with a project, or a video with a song.
     """
     clear(root)
 
     # Title label
-    associate_label = tk.Label(root, text="Associate Data", font=("Helvetica", 16, "bold"), fg="blue")
+    associate_label = ctk.CTkLabel(root, text="Associate Data", font=ctk.CTkFont(size=20, weight="bold"), text_color="blue")
     associate_label.pack(pady=20)
 
     # Combobox for selecting association type
-    associate_type_label = tk.Label(root, text="Select Association Type:", font=("Helvetica", 12))
+    associate_type_label = ctk.CTkLabel(root, text="Select Association Type:", font=ctk.CTkFont(size=14))
     associate_type_label.pack(pady=10)
-    associate_var = tk.StringVar()
-    associate_combobox = ttk.Combobox(root, textvariable=associate_var, state="readonly", font=("Helvetica", 12))
-    associate_combobox['values'] = ["Song to Album", "Partner to Project"]
+    associate_var = ctk.StringVar()
+    associate_combobox = ctk.CTkComboBox(root, variable=associate_var, state="readonly", font=ctk.CTkFont(size=14))
+    associate_combobox.configure(values=["Song to Album", "Partner to Project", "Video to Song"])
     associate_combobox.pack(pady=10)
 
     # Dynamic frame for input fields
-    dynamic_frame = tk.Frame(root)
+    dynamic_frame = ctk.CTkFrame(root)
     dynamic_frame.pack(pady=20)
 
     def update_dynamic_fields(*args):
@@ -1068,14 +1085,14 @@ def show_associate_screen(root, create_admin_window):
 
         if association_type == "Song to Album":
             # Song to Album fields
-            song_label = tk.Label(dynamic_frame, text="Song Title:", font=("Helvetica", 12))
+            song_label = ctk.CTkLabel(dynamic_frame, text="Song Title:", font=ctk.CTkFont(size=14))
             song_label.grid(row=0, column=0, padx=10, pady=5, sticky="e")
-            song_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
+            song_entry = ctk.CTkEntry(dynamic_frame, font=ctk.CTkFont(size=14))
             song_entry.grid(row=0, column=1, padx=10, pady=5)
 
-            album_label = tk.Label(dynamic_frame, text="Album Title:", font=("Helvetica", 12))
+            album_label = ctk.CTkLabel(dynamic_frame, text="Album Title:", font=ctk.CTkFont(size=14))
             album_label.grid(row=1, column=0, padx=10, pady=5, sticky="e")
-            album_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
+            album_entry = ctk.CTkEntry(dynamic_frame, font=ctk.CTkFont(size=14))
             album_entry.grid(row=1, column=1, padx=10, pady=5)
 
             def associate_song_album():
@@ -1087,7 +1104,7 @@ def show_associate_screen(root, create_admin_window):
                     return
 
                 try:
-                    conn = conn = connect_db()
+                    conn = connect_db()
                     cursor = conn.cursor()
 
                     # Fetch the album ID based on the album title
@@ -1134,19 +1151,19 @@ def show_associate_screen(root, create_admin_window):
                 finally:
                     conn.close()
 
-            associate_button = tk.Button(dynamic_frame,text="Associate",font=("Helvetica", 12),bg="lightblue",relief="raised",command=associate_song_album)
+            associate_button = ctk.CTkButton(dynamic_frame, text="Associate", font=ctk.CTkFont(size=14), fg_color="#5CB85C", command=associate_song_album)
             associate_button.grid(row=2, column=0, columnspan=2, pady=10)
 
         elif association_type == "Partner to Project":
             # Partner to Project fields
-            partner_label = tk.Label(dynamic_frame, text="Partner ID:", font=("Helvetica", 12))
+            partner_label = ctk.CTkLabel(dynamic_frame, text="Partner ID:", font=ctk.CTkFont(size=14))
             partner_label.grid(row=0, column=0, padx=10, pady=5, sticky="e")
-            partner_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
+            partner_entry = ctk.CTkEntry(dynamic_frame, font=ctk.CTkFont(size=14))
             partner_entry.grid(row=0, column=1, padx=10, pady=5)
 
-            project_label = tk.Label(dynamic_frame, text="Project Title:", font=("Helvetica", 12))
+            project_label = ctk.CTkLabel(dynamic_frame, text="Project Title:", font=ctk.CTkFont(size=14))
             project_label.grid(row=1, column=0, padx=10, pady=5, sticky="e")
-            project_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
+            project_entry = ctk.CTkEntry(dynamic_frame, font=ctk.CTkFont(size=14))
             project_entry.grid(row=1, column=1, padx=10, pady=5)
 
             def associate_partner_project():
@@ -1186,40 +1203,113 @@ def show_associate_screen(root, create_admin_window):
                 finally:
                     conn.close()
 
-            associate_button = tk.Button(dynamic_frame,text="Associate",font=("Helvetica", 12),bg="lightblue",relief="raised",command=associate_partner_project)
+            associate_button = ctk.CTkButton(dynamic_frame, text="Associate", font=ctk.CTkFont(size=14), fg_color="#5CB85C", command=associate_partner_project)
+            associate_button.grid(row=2, column=0, columnspan=2, pady=10)
+
+        elif association_type == "Video to Song":
+            # Video to Song fields
+            video_label = ctk.CTkLabel(dynamic_frame, text="Video Title:", font=ctk.CTkFont(size=14))
+            video_label.grid(row=0, column=0, padx=10, pady=5, sticky="e")
+            video_entry = ctk.CTkEntry(dynamic_frame, font=ctk.CTkFont(size=14))
+            video_entry.grid(row=0, column=1, padx=10, pady=5)
+
+            song_label = ctk.CTkLabel(dynamic_frame, text="Song Title:", font=ctk.CTkFont(size=14))
+            song_label.grid(row=1, column=0, padx=10, pady=5, sticky="e")
+            song_entry = ctk.CTkEntry(dynamic_frame, font=ctk.CTkFont(size=14))
+            song_entry.grid(row=1, column=1, padx=10, pady=5)
+
+            def associate_video_song():
+                video_title = video_entry.get().strip()
+                song_title = song_entry.get().strip()
+
+                if not video_title or not song_title:
+                    messagebox.showerror("Error", "Please fill in both Video Title and Song Title.")
+                    return
+
+                try:
+                    conn = connect_db()
+                    cursor = conn.cursor()
+
+                    # Fetch the video ID and artist ID based on the video title
+                    cursor.execute("""
+                        SELECT Video.VideoID, Project.ArtID
+                        FROM Video
+                        JOIN Project ON Video.ProjectID = Project.ProjectID
+                        WHERE Project.Title = ?
+                    """, (video_title,))
+                    video = cursor.fetchone()
+
+                    if not video:
+                        messagebox.showerror("Error", "Video not found.")
+                        return
+
+                    video_id, video_art_id = video
+
+                    # Fetch the song ID and artist ID based on the song title
+                    cursor.execute("""
+                        SELECT Song.SongID, Project.ArtID
+                        FROM Song
+                        JOIN Project ON Song.ProjectID = Project.ProjectID
+                        WHERE Project.Title = ?
+                    """, (song_title,))
+                    song = cursor.fetchone()
+
+                    if not song:
+                        messagebox.showerror("Error", "Song not found.")
+                        return
+
+                    song_id, song_art_id = song
+
+                    # Ensure the video and song belong to the same artist
+                    if video_art_id != song_art_id:
+                        messagebox.showerror("Error", "Video and Song do not belong to the same artist.")
+                        return
+
+                    # Update the SongID in the Video table
+                    cursor.execute("UPDATE Video SET SongID = ? WHERE VideoID = ?", (song_id, video_id))
+                    conn.commit()
+                    messagebox.showinfo("Success", "Video associated with Song successfully.")
+                except sqlite3.Error as e:
+                    messagebox.showerror("Database Error", f"Error: {e}")
+                finally:
+                    conn.close()
+
+            associate_button = ctk.CTkButton(dynamic_frame, text="Associate", font=ctk.CTkFont(size=14), fg_color="#5CB85C", command=associate_video_song)
             associate_button.grid(row=2, column=0, columnspan=2, pady=10)
 
     associate_var.trace_add("write", update_dynamic_fields)
 
     # Back button
-    back_button = tk.Button(root,text="Back",font=("Helvetica", 12),bg="lightcoral",relief="raised",command=lambda: go_back(root, create_admin_window))
+    back_button = ctk.CTkButton(root, text="Back", font=ctk.CTkFont(size=14), fg_color="#FF6F61", command=lambda: go_back(root, create_admin_main_menu))
     back_button.pack(pady=10)
 
 
 
-#--------------BETTER VIEW
-def show_better_view(root, create_admin_window):
-    """Show a better view with releases categorized into Albums, Singles, and Videos."""
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#BETTER VIEW
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+def show_better_view(root, create_admin_main_menu):
+    """Show a better view with releases categorized into Albums, Songs, Singles, and Videos."""
     # Clear the window
     clear(root)
 
     # Title Frame
-    title_frame = tk.Frame(root)
+    title_frame = ctk.CTkFrame(root)
     title_frame.pack(fill="x", pady=10)
 
     # Title Label
-    title_label = tk.Label(title_frame, text="Better View", font=("Helvetica", 16, "bold"), fg="blue")
+    title_label = ctk.CTkLabel(
+        title_frame, text="Better View", font=ctk.CTkFont(size=20, weight="bold"), text_color="blue"
+    )
     title_label.pack(side="left", padx=10)
 
     # Back Button
-    back_button = tk.Button(
-        title_frame, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised",
-        command=lambda: go_back(root, create_admin_window)
-    )
+    back_button = ctk.CTkButton(title_frame, text="Back", fg_color="#FF6F61", command=lambda: go_back(root, create_admin_main_menu))
     back_button.pack(side="right", padx=10)
 
     # Main Frame
-    main_frame = tk.Frame(root)
+    main_frame = ctk.CTkFrame(root)
     main_frame.pack(fill="both", expand=True)
 
     # Sidebar for categories
@@ -1231,7 +1321,7 @@ def show_better_view(root, create_admin_window):
     sidebar.grid(row=0, column=0, sticky="ns", padx=10, pady=10)
 
     # Content Area
-    content_frame = tk.Frame(main_frame)
+    content_frame = ctk.CTkFrame(main_frame)
     content_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
     main_frame.grid_rowconfigure(0, weight=1)
     main_frame.grid_columnconfigure(1, weight=1)
@@ -1267,6 +1357,13 @@ def show_better_view(root, create_admin_window):
         cursor.execute("""
             SELECT COUNT(*) 
             FROM Song 
+            WHERE ProjectID IN (SELECT ProjectID FROM Project)
+        """)
+        song_count = cursor.fetchone()[0]
+
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM Song 
             WHERE SongID NOT IN (
                 SELECT SongID 
                 FROM Is_part_of
@@ -1282,8 +1379,9 @@ def show_better_view(root, create_admin_window):
         video_count = cursor.fetchone()[0]
 
         # Populate sidebar
-        sidebar.insert("", "end", "releases", text="Releases", values=(album_count + single_count + video_count))
+        sidebar.insert("", "end", "releases", text="Releases", values=(album_count + song_count + single_count + video_count))
         sidebar.insert("releases", "end", "albums", text="Albums", values=(album_count))
+        sidebar.insert("releases", "end", "songs", text="Songs", values=(song_count))
         sidebar.insert("releases", "end", "singles", text="Singles", values=(single_count))
         sidebar.insert("releases", "end", "videos", text="Videos", values=(video_count))
 
@@ -1318,7 +1416,6 @@ def show_better_view(root, create_admin_window):
                 albums = cursor.fetchall()
 
                 for album_id, album_title, artist, genre in albums:
-                    # Add album as parent node
                     album_node = details_tree.insert("", "end", text=f"{album_title}", values=("Album", artist, genre, ""))
 
                     # Fetch songs in the album
@@ -1327,20 +1424,40 @@ def show_better_view(root, create_admin_window):
                             Project.Title AS SongTitle, 
                             Song.Duration, 
                             Song.Rating, 
-                            Song.Plays, 
-                            Artist.Nickname AS Artist
+                            Song.Plays
                         FROM Song
                         JOIN Project ON Song.ProjectID = Project.ProjectID
                         JOIN Is_part_of ON Song.SongID = Is_part_of.SongID
-                        JOIN Artist ON Project.ArtID = Artist.ArtID
                         WHERE Is_part_of.AlbID = ?
                     """, (album_id,))
                     songs = cursor.fetchall()
 
-                    for song_title, duration, rating, plays, song_artist in songs:
+                    for song_title, duration, rating, plays in songs:
                         mins, secs = divmod(duration, 60)
                         song_details = f"Duration: {mins}:{secs:02d}, Rating: {rating}, Plays: {plays}"
-                        details_tree.insert(album_node, "end", text=f"{song_title}", values=("Song", song_artist, "", song_details))
+                        details_tree.insert(album_node, "end", text=f"{song_title}", values=("Song", artist, "", song_details))
+
+            elif category == "songs":
+                # Fetch all songs
+                cursor.execute("""
+                    SELECT 
+                        Project.Title AS SongTitle, 
+                        Artist.Nickname AS Artist, 
+                        Genre.Name AS Genre, 
+                        Song.Duration, 
+                        Song.Rating, 
+                        Song.Plays
+                    FROM Song
+                    JOIN Project ON Song.ProjectID = Project.ProjectID
+                    JOIN Artist ON Project.ArtID = Artist.ArtID
+                    JOIN Genre ON Project.GenreID = Genre.GenreID
+                """)
+                songs = cursor.fetchall()
+
+                for song_title, artist, genre, duration, rating, plays in songs:
+                    mins, secs = divmod(duration, 60)
+                    song_details = f"Duration: {mins}:{secs:02d}, Rating: {rating}, Plays: {plays}"
+                    details_tree.insert("", "end", text=f"{song_title}", values=("Song", artist, genre, song_details))
 
             elif category == "singles":
                 # Fetch singles
@@ -1394,7 +1511,7 @@ def show_better_view(root, create_admin_window):
     def on_sidebar_select(event):
         """Handle sidebar selection and load corresponding details."""
         selected_item = sidebar.focus()
-        if selected_item in ["albums", "singles", "videos"]:
+        if selected_item in ["albums", "songs", "singles", "videos"]:
             load_details(selected_item)
 
     sidebar.bind("<<TreeviewSelect>>", on_sidebar_select)
@@ -1405,46 +1522,40 @@ def show_better_view(root, create_admin_window):
 
 
 
-#-----------DELETE FUNCTION
 
-def show_delete_screen(root, create_admin_window):
-    """
-    Display the delete screen with options to delete an Individual, Project, or Partner.
-    """
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#DELETE FUNCTION
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+def show_delete_screen(root, create_admin_main_menu):
+    """Display the delete screen with options to delete an Individual, Project, or Partner."""
     clear(root)  # Clear existing widgets on the screen
 
     # Title Frame
-    title_frame = tk.Frame(root)
+    title_frame = ctk.CTkFrame(root)
     title_frame.pack(fill="x", pady=10)
 
     # Title Label
-    delete_label = tk.Label(title_frame, text="Delete Records", font=("Helvetica", 16, "bold"), fg="blue")
+    delete_label = ctk.CTkLabel(title_frame, text="Delete Records", font=ctk.CTkFont(size=20, weight="bold"), text_color="blue")
     delete_label.pack(side="left", padx=10)
 
     # Back Button
-    back_button = tk.Button(
-        title_frame, text="Back", font=("Helvetica", 12), bg="lightcoral", relief="raised",
-        command=lambda: go_back(root, create_admin_window)
-    )
+    back_button = ctk.CTkButton(title_frame, text="Back", fg_color="#FF6F61", command=lambda: go_back(root, create_admin_main_menu))
     back_button.pack(side="right", padx=10)
 
     # Combobox for selecting the delete option
-    delete_type_label = tk.Label(root, text="Select Record Type to Delete:", font=("Helvetica", 12))
+    delete_type_label = ctk.CTkLabel(root, text="Select Record Type to Delete:", font=ctk.CTkFont(size=14))
     delete_type_label.pack(pady=10)
 
-    delete_var = tk.StringVar()
-    delete_combobox = ttk.Combobox(root, textvariable=delete_var, state="readonly", font=("Helvetica", 12))
-    delete_combobox['values'] = ["Individual", "Project", "Partner"]
+    delete_var = ctk.StringVar()
+    delete_combobox = ctk.CTkComboBox(root, variable=delete_var, values=["Individual", "Project", "Partner"], font=ctk.CTkFont(size=14))
     delete_combobox.pack(pady=10)
 
     # Frame for dynamic input fields
-    dynamic_frame = tk.Frame(root)
+    dynamic_frame = ctk.CTkFrame(root)
     dynamic_frame.pack(pady=20)
 
     def update_dynamic_fields(*args):
-        """
-        Update input fields dynamically based on the selected delete option.
-        """
+        """Update input fields dynamically based on the selected delete option."""
         for widget in dynamic_frame.winfo_children():
             widget.destroy()
 
@@ -1452,9 +1563,9 @@ def show_delete_screen(root, create_admin_window):
 
         if delete_type == "Individual":
             # Individual deletion
-            id_label = tk.Label(dynamic_frame, text="Enter Individual ID:", font=("Helvetica", 12))
+            id_label = ctk.CTkLabel(dynamic_frame, text="Enter Individual ID:", font=ctk.CTkFont(size=14))
             id_label.grid(row=0, column=0, padx=10, pady=5, sticky="e")
-            id_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
+            id_entry = ctk.CTkEntry(dynamic_frame, font=ctk.CTkFont(size=14))
             id_entry.grid(row=0, column=1, padx=10, pady=5)
 
             def delete_individual():
@@ -1479,179 +1590,58 @@ def show_delete_screen(root, create_admin_window):
                     conn.commit()
                     messagebox.showinfo("Success", "Individual deleted successfully.")
                 except sqlite3.Error as e:
-                    print(f"Error: {e}")
                     messagebox.showerror("Error", f"Database error: {e}")
                 finally:
                     conn.close()
 
-            delete_button = tk.Button(dynamic_frame, text="Delete", font=("Helvetica", 12), bg="red", relief="raised", command=delete_individual)
+            delete_button = ctk.CTkButton(dynamic_frame, text="Delete", fg_color="#E53935", command=delete_individual)
             delete_button.grid(row=1, column=0, columnspan=2, pady=10)
 
         elif delete_type == "Project":
             # Project deletion
-            title_label = tk.Label(dynamic_frame, text="Enter Album Title:", font=("Helvetica", 12))
+            title_label = ctk.CTkLabel(dynamic_frame, text="Enter Project Title:", font=ctk.CTkFont(size=14))
             title_label.grid(row=0, column=0, padx=10, pady=5, sticky="e")
-            title_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
+            title_entry = ctk.CTkEntry(dynamic_frame, font=ctk.CTkFont(size=14))
             title_entry.grid(row=0, column=1, padx=10, pady=5)
 
-            def delete_album():
-                album_title = title_entry.get().strip()
-                if not album_title:
-                    messagebox.showerror("Error", "Please enter a valid Album Title.")
+            def delete_project():
+                project_title = title_entry.get().strip()
+                if not project_title:
+                    messagebox.showerror("Error", "Please enter a valid Project Title.")
                     return
 
                 try:
                     conn = sqlite3.connect("db.db")
                     cursor = conn.cursor()
 
-                    # Check if the album exists
-                    cursor.execute("""
-                        SELECT Album.AlbID, Album.ProjectID
-                        FROM Album
-                        JOIN Project ON Album.ProjectID = Project.ProjectID
-                        WHERE Project.Title = ?
-                    """, (album_title,))
-                    album = cursor.fetchone()
-                    if not album:
-                        messagebox.showerror("Error", "Album not found.")
+                    # Check if the project exists
+                    cursor.execute("SELECT ProjectID FROM Project WHERE Title = ?", (project_title,))
+                    project = cursor.fetchone()
+                    if not project:
+                        messagebox.showerror("Error", "Project not found.")
                         return
 
-                    album_id, project_id = album
+                    project_id = project[0]
 
-                    # Ask whether to preserve the songs
-                    response = messagebox.askyesnocancel(
-                        "Preserve Songs",
-                        "Do you want to preserve the songs in the database?"
-                    )
-
-                    if response is None:
-                        # User clicked "Cancel"
-                        return
-                    elif response:
-                        # Update the songs to become singles unless they are in another album
-                        cursor.execute("""
-                            SELECT SongID 
-                            FROM Is_part_of 
-                            WHERE AlbID = ?
-                        """, (album_id,))
-                        songs = cursor.fetchall()
-
-                        for song in songs:
-                            song_id = song[0]
-
-                            # Check if the song is part of another album
-                            cursor.execute("""
-                                SELECT AlbID 
-                                FROM Is_part_of 
-                                WHERE SongID = ? AND AlbID != ?
-                            """, (song_id, album_id))
-                            is_in_other_album = cursor.fetchone()
-
-                            if not is_in_other_album:
-                                # Remove association with the current album, making it a single
-                                cursor.execute("""
-                                    DELETE FROM Is_part_of 
-                                    WHERE SongID = ? AND AlbID = ?
-                                """, (song_id, album_id))
-
-                    else:
-                        # Fetch songs associated with the album
-                        cursor.execute("""
-                            SELECT SongID 
-                            FROM Is_part_of 
-                            WHERE AlbID = ?
-                        """, (album_id,))
-                        songs = cursor.fetchall()
-
-                        shared_songs = []
-                        exclusive_songs = []
-
-                        for song in songs:
-                            song_id = song[0]
-
-                            # Check if the song is part of another album
-                            cursor.execute("""
-                                SELECT AlbID 
-                                FROM Is_part_of 
-                                WHERE SongID = ? AND AlbID != ?
-                            """, (song_id, album_id))
-                            is_in_other_album = cursor.fetchone()
-
-                            if is_in_other_album:
-                                shared_songs.append(song_id)
-                            else:
-                                exclusive_songs.append(song_id)
-
-                        if shared_songs:
-                            # Ask the user if they want to delete shared songs as well
-                            shared_response = messagebox.askyesnocancel(
-                                "Shared Songs Detected",
-                                "There are songs that appear on other albums as well. Delete those as well?"
-                            )
-                            if shared_response is None:
-                                # User clicked "Cancel"
-                                return
-                            elif shared_response:
-                                # Delete shared songs from all albums and the project table
-                                for song_id in shared_songs:
-                                    # Remove associations with all albums
-                                    cursor.execute("""
-                                        DELETE FROM Is_part_of 
-                                        WHERE SongID = ?
-                                    """, (song_id,))
-                                    
-                                    # Delete the song from the Project table
-                                    cursor.execute("""
-                                        DELETE FROM Project 
-                                        WHERE ProjectID IN (
-                                            SELECT ProjectID 
-                                            FROM Song 
-                                            WHERE SongID = ?
-                                        )
-                                    """, (song_id,))
-                            else:
-                                # Do not delete shared songs; just remove association with this album
-                                for song_id in shared_songs:
-                                    cursor.execute("""
-                                        DELETE FROM Is_part_of 
-                                        WHERE SongID = ? AND AlbID = ?
-                                    """, (song_id, album_id))
-
-                        # Delete exclusive songs from the Project table
-                        for song_id in exclusive_songs:
-                            cursor.execute("""
-                                DELETE FROM Project 
-                                WHERE ProjectID IN (
-                                    SELECT ProjectID 
-                                    FROM Song 
-                                    WHERE SongID = ?
-                                )
-                            """, (song_id,))
-
-                    # Delete the album itself
-                    cursor.execute("DELETE FROM Album WHERE AlbID = ?", (album_id,))
+                    # Proceed with deletion
                     cursor.execute("DELETE FROM Project WHERE ProjectID = ?", (project_id,))
                     conn.commit()
-                    messagebox.showinfo("Success", "Album and associated changes applied successfully.")
+                    messagebox.showinfo("Success", "Project deleted successfully.")
                 except sqlite3.Error as e:
-                    print(f"Error: {e}")
                     messagebox.showerror("Error", f"Database error: {e}")
                 finally:
                     conn.close()
 
-
-
-
-            # Ensure the button is properly placed
-            delete_button = tk.Button(dynamic_frame, text="Delete", font=("Helvetica", 12), bg="red", relief="raised", command=delete_album)
+            delete_button = ctk.CTkButton(
+                dynamic_frame, text="Delete", fg_color="red", command=delete_project
+            )
             delete_button.grid(row=1, column=0, columnspan=2, pady=10)
-
 
         elif delete_type == "Partner":
             # Partner deletion
-            id_label = tk.Label(dynamic_frame, text="Enter Partner ID:", font=("Helvetica", 12))
+            id_label = ctk.CTkLabel(dynamic_frame, text="Enter Partner ID:", font=ctk.CTkFont(size=14))
             id_label.grid(row=0, column=0, padx=10, pady=5, sticky="e")
-            id_entry = tk.Entry(dynamic_frame, font=("Helvetica", 12))
+            id_entry = ctk.CTkEntry(dynamic_frame, font=ctk.CTkFont(size=14))
             id_entry.grid(row=0, column=1, padx=10, pady=5)
 
             def delete_partner():
@@ -1676,14 +1666,12 @@ def show_delete_screen(root, create_admin_window):
                     conn.commit()
                     messagebox.showinfo("Success", "Partner deleted successfully.")
                 except sqlite3.Error as e:
-                    print(f"Error: {e}")
                     messagebox.showerror("Error", f"Database error: {e}")
                 finally:
                     conn.close()
 
-            delete_button = tk.Button(dynamic_frame, text="Delete", font=("Helvetica", 12), bg="red", relief="raised", command=delete_partner)
+            delete_button = ctk.CTkButton(dynamic_frame, text="Delete", fg_color="#FF0000", command=delete_partner)
             delete_button.grid(row=1, column=0, columnspan=2, pady=10)
 
     # Trace changes in combobox selection
     delete_var.trace_add("write", update_dynamic_fields)
-
