@@ -22,7 +22,7 @@ def show_main_screen():
     clear(root)
 
     # Title Label
-    title_label = ctk.CTkLabel(root, text="Individual Panel", font=ctk.CTkFont(size=20, weight="bold"))
+    title_label = ctk.CTkLabel(root, text="Hello "+ show_name(), font=ctk.CTkFont(size=20, weight="bold"))
     title_label.pack(pady=20)
 
     # My Profile Button
@@ -44,6 +44,25 @@ def show_main_screen():
     exit_button = ctk.CTkButton(root, text="Exit to Main", fg_color="#FFB300", command=exit_to_main)
     exit_button.pack(pady=20)
 
+def show_name():
+    """Used to display name of the logged user"""
+    try:
+        conn = sqlite3.connect("db.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT First_name FROM Individual WHERE UserID = ?", (user_id,))
+        name = cursor.fetchone()
+        name = name[0]
+        if not name:
+            messagebox.showerror(title="Error", message="No associated artist found for the user.")
+            return
+
+
+    except sqlite3.Error as e:
+        messagebox.showerror(title="Error", message=f"Database error: {e}")
+    finally:
+        conn.close()
+    
+    return name
 
 def show_dashboard():
     """Displays the dashboard for the logged-in user's artist."""
