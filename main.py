@@ -9,6 +9,30 @@ def style_widget(widget, **kwargs):
     for key, value in kwargs.items():
         widget.configure(**kwargs)
 
+def reset_database():
+    """Reset the database by executing the SQL commands from database.sql."""
+    try:
+        # Open and read the SQL file
+        with open("database.sql", "r") as file:
+            sql_script = file.read()
+
+        # Connect to the SQLite database
+        conn = sqlite3.connect("db.db")
+        cursor = conn.cursor()
+
+        # Execute the SQL script
+        cursor.executescript(sql_script)
+        conn.commit()
+        messagebox.showinfo("Reset Database", "Database reset successfully.")
+    except FileNotFoundError:
+        messagebox.showerror("Error", "The database.sql file was not found.")
+    except sqlite3.Error as e:
+        messagebox.showerror("Error", f"Database error: {e}")
+    finally:
+        conn.close()
+
+
+
 
 def show_main_menu():
     for widget in root.winfo_children():
@@ -21,6 +45,11 @@ def show_main_menu():
     # Login Button
     login_button = ctk.CTkButton(root, text="Login",fg_color="#5CB85C", command=show_login_screen, font=ctk.CTkFont(size=14))
     login_button.pack(pady=10)
+
+    reset_db_button = ctk.CTkButton(
+        root, text="Reset Database", fg_color="#FF6F61", command=reset_database, font=ctk.CTkFont(size=14)
+    )
+    reset_db_button.pack(pady=10)
 
 
 def show_login_screen():
