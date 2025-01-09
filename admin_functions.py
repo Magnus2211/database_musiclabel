@@ -960,7 +960,7 @@ def show_project_insert_form(root):
             conn.commit()
         except sqlite3.Error as e:
             print(f"Database error occurred: {e}")
-            messagebox.showerror("Error", f"Failed to insert project: {e}")
+            messagebox.showerror("Error", f"This project already exists.")
         finally:
             conn.close()
 
@@ -1579,20 +1579,55 @@ def show_delete_screen(root, create_admin_main_menu):
                     cursor = conn.cursor()
 
                     # Check if the individual exists
-                    cursor.execute("SELECT * FROM Individual WHERE IndividID = ?", (int(individ_id),))
+                    cursor.execute("SELECT ArtID, UserID FROM Individual WHERE IndividID = ?", (int(individ_id),))
                     individual = cursor.fetchone()
                     if not individual:
                         messagebox.showerror("Error", "Individual not found.")
                         return
 
-                    # Proceed with deletion
+                    art_id, user_id = individual
+
+                    # Check if there are other individuals related to the same ArtID
+                    cursor.execute("SELECT COUNT(*) FROM Individual WHERE ArtID = ?", (art_id,))
+                    related_individuals_count = cursor.fetchone()[0]
+
+                    if related_individuals_count == 1:
+                        # If this is the last individual, delete all related data for the artist (All Projects and associations from all tables)
+                        cursor.execute("SELECT ProjectID FROM Project WHERE ArtID = ?", (art_id,))
+                        project_ids = cursor.fetchall()
+
+                        for project_id in project_ids:
+                            project_id = project_id[0]
+
+                            # Delete associated entries in related tables
+                            cursor.execute("DELETE FROM Release WHERE ProjectID = ?", (project_id,))
+                            cursor.execute("DELETE FROM Album WHERE ProjectID = ?", (project_id,))
+                            cursor.execute("DELETE FROM Song WHERE ProjectID = ?", (project_id,))
+                            cursor.execute("DELETE FROM Video WHERE ProjectID = ?", (project_id,))
+                            cursor.execute("DELETE FROM Project WHERE ProjectID = ?", (project_id,))
+
+                        # Delete the artist
+                        cursor.execute("DELETE FROM Artist WHERE ArtID = ?", (art_id,))
+
+                    # Delete the individual
                     cursor.execute("DELETE FROM Individual WHERE IndividID = ?", (int(individ_id),))
-                    conn.commit()
-                    messagebox.showinfo("Success", "Individual deleted successfully.")
+
+                    # Delete the associated user
+                    cursor.execute("DELETE FROM User WHERE UserID = ?", (user_id,))
+
+                    if related_individuals_count == 1:
+                        conn.commit()
+                        messagebox.showinfo("Success", "Individual and related data deleted successfully.")
+                    else:
+                        conn.commit()
+                        messagebox.showinfo("Success", "Individual deleted successfully.")
+
                 except sqlite3.Error as e:
                     messagebox.showerror("Error", f"Database error: {e}")
                 finally:
                     conn.close()
+
+
 
             delete_button = ctk.CTkButton(dynamic_frame, text="Delete", fg_color="#E53935", command=delete_individual)
             delete_button.grid(row=1, column=0, columnspan=2, pady=10)
@@ -1623,14 +1658,36 @@ def show_delete_screen(root, create_admin_main_menu):
 
                     project_id = project[0]
 
-                    # Proceed with deletion
+                    # Check if the project is a song
+                    cursor.execute("SELECT SongID FROM Song WHERE ProjectID = ?", (project_id,))
+                    song = cursor.fetchone()
+
+                    if song:
+                        song_id = song[0]
+
+                        # Set SongID to NULL for videos referencing this song
+                        cursor.execute("""
+                            UPDATE Video
+                            SET SongID = NULL
+                            WHERE SongID = ?
+                        """, (song_id,))
+
+                        # Delete the song record
+                        cursor.execute("DELETE FROM Song WHERE SongID = ?", (song_id,))
+
+                    # Proceed with deletion of the project and other related data
+                    cursor.execute("DELETE FROM Release WHERE ProjectID = ?", (project_id,))
+                    cursor.execute("DELETE FROM Album WHERE ProjectID = ?", (project_id,))
+                    cursor.execute("DELETE FROM Video WHERE ProjectID = ?", (project_id,))
                     cursor.execute("DELETE FROM Project WHERE ProjectID = ?", (project_id,))
+
                     conn.commit()
-                    messagebox.showinfo("Success", "Project deleted successfully.")
+                    messagebox.showinfo("Success", "Project and associated records deleted successfully.")
                 except sqlite3.Error as e:
                     messagebox.showerror("Error", f"Database error: {e}")
                 finally:
                     conn.close()
+
 
             delete_button = ctk.CTkButton(
                 dynamic_frame, text="Delete", fg_color="red", command=delete_project
